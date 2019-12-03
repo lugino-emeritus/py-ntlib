@@ -2,7 +2,7 @@ import datetime
 
 from .connect import connect_to
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 #-------------------------------------------------------
 
@@ -18,6 +18,16 @@ def set_celldata(sheet, cell_id, val):
 def get_arraydata(sheet, cell_id, end_id):
 	return sheet.getCellRangeByName(cell_id + ':' + end_id).DataArray if isinstance(cell_id, str) else \
 			sheet.getCellRangeByPosition(cell_id[1], cell_id[0], end_id[1], end_id[0]).DataArray
+
+
+def data_to_str(data):
+	if isinstance(data, str):
+		return data
+	if isinstance(data, float):
+		z = int(data)
+		if z == data:
+			data = z
+	return str(data)
 
 
 class MiniSheet:
@@ -36,6 +46,10 @@ class MiniSheet:
 		return self.sheet[ind].DataArray[0][0]
 	def __setitem__(self, ind, val):
 		self.sheet[ind].DataArray = ((val,),)
+
+
+def get_msheet_dic(model):
+	return {s.Name:MiniSheet(s) for s in model.Sheets}
 
 
 _DAY0 = datetime.datetime(1899,12,30)
