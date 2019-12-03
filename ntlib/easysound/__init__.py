@@ -20,13 +20,13 @@ logger = logging.getLogger(__name__)
 
 #-------------------------------------------------------
 
-def _alternative_file(filename):
+def _alt_file(filename):
 	return filename if os.path.exists(filename) else os.path.join(os.path.dirname(__file__), filename)
 
 
 class PlaySound:
 	def __init__(self, filename, device=None, ch_out_num=None):
-		self._filename = _alternative_file(filename)
+		self._filename = _alt_file(filename)
 		self._device = device
 		self._q = queue.Queue(maxsize=_BUFFERSIZE)
 		self._should_run = False
