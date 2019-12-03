@@ -12,7 +12,7 @@ def int_or_str(s):
 def int_set(s):
 	return {int(val) for val in s.split(',') if val is not None}
 
-parser = argparse.ArgumentParser(description=__doc__)
+parser = argparse.ArgumentParser()
 parser.add_argument('filename', help='audio file to be played back')
 parser.add_argument('-d', '--device', type=int_or_str,
 					help='output device (numeric ID or substring)')
