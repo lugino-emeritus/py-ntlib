@@ -4,7 +4,7 @@ import subprocess as _subp
 import sys
 import threading
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 logger = logging.getLogger(__name__)
 
@@ -30,18 +30,15 @@ def shell_cmd(cmd):
 	return _subp.run(cmd, shell=True, stdin=_subp.DEVNULL,
 			stdout=_subp.PIPE, stderr=_subp.STDOUT).stdout.decode(errors='replace')
 
-(CMD_AUTO, CMD_EXT, CMD_FILE, CMD_SYS) = range(4)
+(CMD_AUTO, CMD_EXT, CMD_SYS, CMD_FILE) = range(4)
 
 def start_app(cmd, *, cmd_type=CMD_AUTO):
 	'''Starts a new application or opens a given file.
 	'''
 	if cmd_type == CMD_AUTO:
 		if isinstance(cmd, str):
-			if os.path.isfile(cmd):
-				cmd_type = CMD_FILE
-			else:
-				cmd_type = CMD_SYS
-		else:  # cmd is list
+			cmd_type = CMD_FILE if os.path.isfile(cmd) else CMD_SYS
+		else:
 			cmd_type = CMD_EXT
 	try:
 		if cmd_type == CMD_EXT:
@@ -51,8 +48,7 @@ def start_app(cmd, *, cmd_type=CMD_AUTO):
 		elif cmd_type == CMD_FILE:
 			_start_file(cmd)
 		else:
-			logger.warning('unknown cmd_type')
-			return False
+			raise ValueError('unknown cmd_type')
 		return True
 	except Exception:
 		logger.exception('not possible to start program (type={}) with command {}'.format(cmd_type, cmd))
