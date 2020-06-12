@@ -9,12 +9,12 @@ FOLDER-STRUCTURE:
   - ntlib
     - imp
     - ...
-  - mylibrary
+  - otherlib
   	- imp
   	- ...
 
 import ntlib.imp as ntimp
-import mylibrary.imp as myimp
+import otherlib.imp as other
 ```
 
 Feel free to change the code for your own purposes.
@@ -34,7 +34,7 @@ Moreover the module has a function `set_log_config(level=logging.INFO)` to set a
 
 ## fctthread
 
-Allows system commands (`shell_cmd`, `start_app`) and helps to handle separate thread (`ThreadLoop`)
+Allows system commands (`shell_cmd`, `start_app`) and helps to handle separate threads (`ThreadLoop`)
 More details in the file.
 
 
@@ -58,7 +58,7 @@ ps.join()
 ps.close()
 ```
 
-It is also possible to call it from console: `python3 easysound --help` for more information.
+It is also possible to start it from console: `python3 easysound --help` for more information.
 
 Moreover the module can call a function periodically with the input volume of a given device:
 ```py
@@ -79,7 +79,7 @@ vol_handler.close()
 
 ## sofficectl
 
-Helps connecting python with an Openoffice or Libreoffice file using `uno`. Especially for Libreoffice calc useful. It uses tcp port 3103 by default.
+Helps connecting python with an OpenOffice or LibreOffice file using `uno`. Especially for Libreoffice calc useful. It uses tcp port 3103 by default.
 
 ```py
 import ntlib.sofficectl.calctools as calctools
@@ -94,4 +94,4 @@ sheet[2,0] = 8  # set cell A3
 sheet[2,0]  # returns 8
 ```
 
-`to_dtime` and `from_dtime` allows working with Liberoffice time values and datetime in python
+`to_dtime` and `from_dtime` converts LibreOffice time values to datetime in python.
