@@ -4,7 +4,7 @@ import subprocess as _subp
 import sys
 import threading
 
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +76,7 @@ class ThreadLoop:
 			print(i)
 			time.sleep(1)
 			if i >= 5:
-				req_stop()  # req_stop(force=True)
+				req_stop()
 		print('done')
 	thread_loop = ThreadLoop(target)
 	"""
@@ -85,9 +85,9 @@ class ThreadLoop:
 		self._t = None
 		self._target = target
 
+		self._lock = threading.Lock()
 		self._should_run = False
 		self._start_flag = False
-		self._lock = threading.Lock()
 		self.stop_error = None
 
 
@@ -101,17 +101,17 @@ class ThreadLoop:
 		return self._t.is_alive() if self._t else False
 
 	def is_healthy(self):
-		return self.stop_error is None and \
-				self.is_alive() == self._should_run
+		return self.stop_error is None and self.is_alive() == self._should_run
 
 
 	def _cont_task(self):
-		self._start_flag = False
+		if self._start_flag:
+			self._start_flag = False
 		return self._should_run
 
-	def _req_stop(self, force=False):
+	def _req_stop(self):
 		with self._lock:
-			if force or not self._start_flag:
+			if not self._start_flag:
 				self._should_run = False
 			return not self._should_run
 
@@ -133,12 +133,12 @@ class ThreadLoop:
 				self._start_flag = True
 				if self._should_run:
 					return
-			self.join(1, check=False)
+			self._t.join(1)
 		with self._lock:
 			if not self.is_alive():
 				self._t = start_internal_thread(self._handle)
 
-	def stop(self, timeout=None, force=False):
-		if self._req_stop(force):
-			self.join(timeout, check=False)
+	def stop(self, timeout=None):
+		if self._req_stop():
+			self._t.join(timeout)
 		return not self.is_alive()

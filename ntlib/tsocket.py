@@ -4,7 +4,7 @@ import time
 
 from socket import (has_ipv6 as HAS_IPV6, timeout as Timeout)
 
-__version__ = '0.2.0'
+__version__ = '0.2.1'
 
 _TIMEOUT_MAX = 30  # used for udp or while waiting for a message
 _TIMEOUT_MID = 2  # timeout for connected tcp socket
@@ -83,13 +83,13 @@ class Socket(socket.socket):
 
 
 	def accept(self):
-		'''return (tsocket.Socket, addr)'''
+		'''returns (tsocket.Socket, addr)'''
 		(sock, addr) = super().accept()
-		return (self.__class__(sock, timeout=self.timeout), addr)
+		return self.__class__(sock, timeout=self.timeout), addr
 	def taccept(self, timeout=_TIMEOUT_MID):
 		'''same as accept, but also sets a different timeout'''
 		(sock, addr) = super().accept()
-		return (self.__class__(sock, timeout=timeout), addr)
+		return self.__class__(sock, timeout=timeout), addr
 
 
 	def tsend(self, data):
@@ -181,7 +181,6 @@ def get_ipv6_addrlst(hostaddr, ipv6=None):
 		raise socket.gaierror('no ip address found for {}'.format(hostaddr))
 	return af == socket.AF_INET6, lst
 
-
 def find_free_addr(ports=(0,), ip='', *, ipv6=None, udp=False):
 	'''ports is a list with prefered ports, port 0 returns a free port'''
 	ipv6, addr = is_ipv6_addr((ip or ('::' if ipv6 else '0.0.0.0'), 0))
@@ -195,21 +194,28 @@ def find_free_addr(ports=(0,), ip='', *, ipv6=None, udp=False):
 			pass
 	return None
 
-def setsockopt_ipv6only(sock, v6only):
-	sock.setsockopt(getattr(socket, 'IPPROTO_IPV6', 41), socket.IPV6_V6ONLY, 1 if v6only else 0)
-def setsockopt_broadcast(sock, allow):
-	sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1 if allow else 0)
 
-
-def create_serversock(port, udp=False):
+def create_serversock(port, udp=False, reuseaddr=False):
 	if HAS_IPV6:
 		sock = Socket(ipv6=True, udp=udp)
 		setsockopt_ipv6only(sock, False)
 	else:
 		sock = Socket(ipv6=False, udp=udp)
+	if reuseaddr:
+		setsockopt_reuseaddr(sock, True)
 	sock.bind(('', port))
 	return sock
 
-def create_connection(address, timeout=2*_TIMEOUT_MID, source_address=None):
+def create_connection(address, timeout=_TIMEOUT_MAX, source_address=None):
 	sock = socket.create_connection(address, timeout, source_address)
 	return Socket(sock, timeout=_TIMEOUT_MID)
+
+
+def setsockopt_ipv6only(sock, v6only):
+	sock.setsockopt(getattr(socket, 'IPPROTO_IPV6', 41), socket.IPV6_V6ONLY, 1 if v6only else 0)
+
+def setsockopt_broadcast(sock, enable):
+	sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1 if enable else 0)
+
+def setsockopt_reuseaddr(sock, enable):
+	sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1 if enable else 0)
