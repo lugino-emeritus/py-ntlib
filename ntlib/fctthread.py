@@ -4,7 +4,7 @@ import subprocess as _subp
 import sys
 import threading
 
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 def _popen_ext(cmd, shell=False):
 	_subp.Popen(cmd, shell=shell, start_new_session=True,
-			stdin=_subp.DEVNULL, stdout=_subp.DEVNULL, stderr=_subp.DEVNULL)
+		stdin=_subp.DEVNULL, stdout=_subp.DEVNULL, stderr=_subp.DEVNULL)
 
 if sys.platform.startswith('win'):
 	def _start_file(cmd):
@@ -23,12 +23,6 @@ elif sys.platform.startswith('linux'):
 else:
 	raise ImportError('platform {} not available'.format(sys.platform))
 
-
-def shell_cmd(cmd):
-	'''Processes a shell command and returns the output.
-	'''
-	return _subp.run(cmd, shell=True, stdin=_subp.DEVNULL,
-			stdout=_subp.PIPE, stderr=_subp.STDOUT).stdout.decode(errors='replace')
 
 (CMD_AUTO, CMD_EXT, CMD_SYS, CMD_FILE) = range(4)
 
@@ -54,6 +48,12 @@ def start_app(cmd, *, cmd_type=CMD_AUTO):
 		logger.exception('not possible to start program (type={}) with command {}'.format(cmd_type, cmd))
 		return False
 
+def shell_cmd(cmd):
+	'''Processes a shell command and returns the output.
+	'''
+	return _subp.run(cmd, shell=True, stdin=_subp.DEVNULL,
+		stdout=_subp.PIPE, stderr=_subp.STDOUT).stdout.decode(errors='replace')
+
 
 def start_internal_thread(target, args=(), kwargs={}):
 	'''Starts and returns a daemon thread.
@@ -62,6 +62,7 @@ def start_internal_thread(target, args=(), kwargs={}):
 	t.start()
 	return t
 
+#-------------------------------------------------------
 
 class ThreadLoop:
 	"""Class to control function in separate thread.
@@ -88,20 +89,23 @@ class ThreadLoop:
 		self._lock = threading.Lock()
 		self._should_run = False
 		self._start_flag = False
-		self.stop_error = None
+		self._stop_error = None
 
+	@property
+	def stop_error(self):
+		return self._stop_error
 
 	def join(self, timeout=None, *, check=True):
 		if self._t:
 			self._t.join(timeout)
-		if check and self.stop_error is not None:
-			raise self.stop_error
+		if check and self._stop_error is not None:
+			raise self._stop_error
 
 	def is_alive(self):
 		return self._t.is_alive() if self._t else False
 
 	def is_healthy(self):
-		return self.stop_error is None and self.is_alive() == self._should_run
+		return self._stop_error is None and self.is_alive() == self._should_run
 
 
 	def _cont_task(self):
@@ -117,12 +121,12 @@ class ThreadLoop:
 
 	def _handle(self):
 		self._should_run = True
-		self.stop_error = None
+		self._stop_error = None
 		try:
 			self._target(self._cont_task, self._req_stop)
 		except Exception as e:
 			logger.exception('thread stopped unexpected')
-			self.stop_error = e
+			self._stop_error = e
 
 
 	def start(self):
