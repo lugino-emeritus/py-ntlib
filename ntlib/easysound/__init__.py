@@ -6,12 +6,12 @@ import sounddevice as sd
 import soundfile as sf
 import threading
 
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 
 _DTYPE = 'float32'  # float32 is highly recommended
 
-_BLOCKTIMEFRAC = 20  # 48000 / 20 = 2400 -> would use blocksize of 4096
-_MAX_BLOCKSIZE = 8192  # = 2^13
+_BLOCKTIMEFRAC = 20  # 48000 / 20 = 2400 -> results in blocksize = 4096
+_MAX_BLOCKSIZE = 8192
 _BUFFERSIZE = 16
 _BUFFERFILL = 4
 assert _BUFFERFILL <= _BUFFERSIZE
@@ -78,8 +78,8 @@ class PlaySound:
 		elif not self._q.empty():
 			if self._file.tell() == self._q.qsize() * self._blocksize:
 				return
-			logger.debug('reset file')
-			self._file.seek(0)
+		logger.debug('soundfile seek to 0')
+		self._file.seek(0)
 		self._fill_buffer(force=True)
 
 	def _fill_buffer(self, force=False):
@@ -138,6 +138,7 @@ class PlaySound:
 			else:
 				self.stream.stop()
 			self._sound_played.wait(self._q_timeout)
+			self.stream.stop()
 			self._should_run = False
 		except Exception as e:
 			if self._should_run or not isinstance(e, queue.Full):
@@ -173,7 +174,7 @@ class PlaySound:
 			self._file.close()
 
 	def get_channel_num(self):
-		return (self._ch_in_num, self._ch_out_num)
+		return self._ch_in_num, self._ch_out_num
 
 	def set_vol_array(self, vol_array):
 		vol_array = np.array(vol_array, dtype=_DTYPE)
@@ -235,13 +236,13 @@ class InputVolume:
 	def _init_stream(self):
 		logger.debug('init stream')
 		self.stream = sd.RawInputStream(device=self._device, channels=1,
-				callback=self._callback, finished_callback=self._finished_callback,
-				blocksize=2048, dtype=_DTYPE)
+			callback=self._callback, finished_callback=self._finished_callback,
+			blocksize=2048, dtype=_DTYPE)
 		self._vol_fact = self.stream.blocksize / (self.stream.samplerate * self._avg_time)
 		if self._vol_fact >= 1:
 			self.close()
 			raise ValueError('vol_avg_time is too short for given blocksize ({}) and samplerate ({})'.format(
-					self.stream.blocksize, self.stream.samplerate))
+				self.stream.blocksize, self.stream.samplerate))
 		self._cb_repeat = int(0.75 / self._vol_fact - 1)
 		self._cb_cnt = self._cb_repeat
 
