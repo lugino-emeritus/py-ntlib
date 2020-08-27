@@ -2,12 +2,14 @@ import select
 import socket
 import time
 
-from socket import (has_ipv6 as HAS_IPV6, timeout as Timeout)
+from socket import (timeout as Timeout, gaierror as GAIError)
 
-__version__ = '0.2.1'
+__version__ = '0.2.6'
 
 _TIMEOUT_MAX = 30  # used for udp or while waiting for a message
 _TIMEOUT_MID = 2  # timeout for connected tcp socket
+
+USE_IPV6 = socket.has_ipv6
 
 #-------------------------------------------------------
 
@@ -40,7 +42,7 @@ class Socket(socket.socket):
 				raise TypeError('sock must be a socket or None')
 		else:
 			super().__init__(socket.AF_INET6 if ipv6 else socket.AF_INET,
-					socket.SOCK_DGRAM if udp else socket.SOCK_STREAM)
+				socket.SOCK_DGRAM if udp else socket.SOCK_STREAM)
 			self.settimeout(timeout or _TIMEOUT_MAX)
 
 		self._ensure_timeout = _EnsureTimeout(self)
@@ -62,8 +64,8 @@ class Socket(socket.socket):
 		Returns True if a timeout occurs,
 			False if there is more data to read.
 
-		If esc_data is defined then the socket tries to send this data in each round.
-			e.g. esc_data=b'\n'; not recommended, but sometimes necessary :(
+		The socket will send esc_data if defined before receiving data,
+			e.g. esc_data=b'\n'.
 		"""
 		with self._ensure_timeout:
 			t_end = time.monotonic() + self.timeout_max
@@ -139,7 +141,7 @@ class Socket(socket.socket):
 				raise Timeout('max-timeout')
 
 	def recv_until(self, maxlen=2**16, end_char=b'\n'):
-		'''Receives all bytes until end_char, not useable with udp'''
+		'''receives all bytes until end_char, not useable with udp'''
 		t_end = time.monotonic() + self.timeout_max
 		data = bytearray()
 		for _ in range(maxlen):
@@ -158,8 +160,8 @@ class Socket(socket.socket):
 
 #-------------------------------------------------------
 
-def is_ipv6_addr(hostaddr):
-	(fam, _, _, _, addr) = socket.getaddrinfo(hostaddr[0], hostaddr[1])[0]
+def is_ipv6_addr(addr):
+	(fam, _, _, _, addr) = socket.getaddrinfo(addr[0], addr[1])[0]
 	return fam == socket.AF_INET6, addr
 
 def get_ipv6_addrlst(hostaddr, ipv6=None):
@@ -178,31 +180,32 @@ def get_ipv6_addrlst(hostaddr, ipv6=None):
 		if addr not in lst:
 			lst.append(addr)
 	if not lst:
-		raise socket.gaierror('no ip address found for {}'.format(hostaddr))
+		raise GAIError('no ip address found for {}'.format(hostaddr))
 	return af == socket.AF_INET6, lst
 
-def find_free_addr(ports=(0,), ip='', *, ipv6=None, udp=False):
-	'''ports is a list with prefered ports, port 0 returns a free port'''
-	ipv6, addr = is_ipv6_addr((ip or ('::' if ipv6 else '0.0.0.0'), 0))
-	ip = addr[0]
-	for p in ports:
-		try:
-			with Socket(ipv6=ipv6, udp=udp) as sock:
-				sock.bind((ip, p))
-				return sock.getsockname()
-		except OSError:
-			pass
+def find_free_addr(*args, udp=False):
+	'''first argument must be an address, followed by ports or more addresses'''
+	ip = args[0][0]
+	addrlst = (x if isinstance(x, tuple) else (ip, x) for x in args)
+	for addr in addrlst:
+		with Socket(ipv6=is_ipv6_addr(addr)[0] if addr[0] else USE_IPV6, udp=udp) as sock:
+			try:
+				if not addr[0] and USE_IPV6: setsockopt_ipv6only(sock, False)
+				sock.bind(addr)
+				return (addr[0], sock.getsockname()[1])
+			except OSError:
+				pass
 	return None
 
 
-def create_serversock(port, udp=False, reuseaddr=False):
-	if HAS_IPV6:
+def create_serversock(port, udp=False, reuseaddr=None):
+	if USE_IPV6:
 		sock = Socket(ipv6=True, udp=udp)
 		setsockopt_ipv6only(sock, False)
 	else:
 		sock = Socket(ipv6=False, udp=udp)
-	if reuseaddr:
-		setsockopt_reuseaddr(sock, True)
+	if reuseaddr is not None:
+		setsockopt_reuseaddr(sock, reuseaddr)
 	sock.bind(('', port))
 	return sock
 
