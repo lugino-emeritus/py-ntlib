@@ -15,11 +15,11 @@ def int_set(s):
 parser = argparse.ArgumentParser()
 parser.add_argument('filename', help='audio file to be played back')
 parser.add_argument('-d', '--device', type=int_or_str,
-					help='output device (numeric ID or substring)')
+	help='output device (numeric ID or substring)')
 parser.add_argument('-n', '--num_out_ch', type=int, help='number of output channels')
 parser.add_argument('-o', '--out_ch', type=int_set,
-					help='channels on which the sound should be played, \
-							e.g. -o 1,0 to play right channel on left speaker and the other way round')
+	help='channels on which the sound should be played, \
+	e.g. -o 1,0 to play right channel on left speaker and the other way round')
 parser.add_argument('-v', '--volume', type=int, help='volume in percent', default=100)
 parser.add_argument('--mono', action='store_true')
 args = parser.parse_args()
