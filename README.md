@@ -1,8 +1,8 @@
 # ntlib
 
-This is a set of small python3 modules I developed for some projects.
+This is a set of small python3 modules developed for different projects.
 
-It can be used e.g. by adding a \*.pth file to a python package path (e.g. site-packages) containing the path name which includes ntlib. This has the advantage of using the same modules on different systems of a dual-boot computer. Moreover it is possible to develop own libraries without naming issues:
+It can be used e.g. by adding a \*.pth file to a python package path (e.g. site-packages) containing the path name which includes ntlib. This has the advantage of using the same modules on different systems of a dual-boot computer. Moreover it is possible to develop libraries without naming issues:
 ```
 FOLDER-STRUCTURE:
 - this_is_a_path/defined_in_a_pth_file
