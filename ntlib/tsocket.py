@@ -4,7 +4,7 @@ import time
 
 from socket import (timeout as Timeout, gaierror as GAIError)
 
-__version__ = '0.2.6'
+__version__ = '0.2.7'
 
 _TIMEOUT_MAX = 30  # used for udp or while waiting for a message
 _TIMEOUT_MID = 2  # timeout for connected tcp socket
@@ -68,10 +68,10 @@ class Socket(socket.socket):
 			e.g. esc_data=b'\n'.
 		"""
 		with self._ensure_timeout:
-			t_end = time.monotonic() + self.timeout_max
+			t_max = time.monotonic() + self.timeout_max
 			self.settimeout(timeout)
 			try:
-				while time.monotonic() < t_end:
+				while time.monotonic() < t_max:
 					if esc_data:
 						try:
 							self.send(esc_data)
@@ -85,27 +85,25 @@ class Socket(socket.socket):
 
 
 	def accept(self):
-		'''returns (tsocket.Socket, addr)'''
+		"""Returns (tsocket.Socket, addr)."""
 		(sock, addr) = super().accept()
 		return self.__class__(sock, timeout=self.timeout), addr
 	def taccept(self, timeout=_TIMEOUT_MID):
-		'''same as accept, but also sets a different timeout'''
+		"""Same as accept, but also sets a different timeout."""
 		(sock, addr) = super().accept()
 		return self.__class__(sock, timeout=timeout), addr
 
 
 	def tsend(self, data):
-		'''socket.sendall uses the timeout for all data,
-		so if data is very long the timeout could be too short, tsend solves this.
-		'''
-		t_end = time.monotonic() + self.timeout_max
+		"""Sends all data within timeout_max."""
+		t_max = time.monotonic() + self.timeout_max
 		tosend = len(data)
 		while tosend:
 			if tosend < 2**16:
 				self.sendall(data[-tosend:])
 				break
 			tosend -= self.send(data[-tosend:])
-			if t_end < time.monotonic():
+			if t_max < time.monotonic():
 				raise Timeout('tsend max-timeout, not sent: {} bytes'.format(tosend))
 
 	def send_list(self, lst):
@@ -113,11 +111,11 @@ class Socket(socket.socket):
 		if totalen < 2**16:
 			self.sendall(b''.join(lst))
 		else:
-			t_end = time.monotonic() + self.timeout_max
+			t_max = time.monotonic() + self.timeout_max
 			for data in lst:
 				tosend = len(data)
 				while tosend:
-					if t_end < time.monotonic():
+					if t_max < time.monotonic():
 						raise Timeout('max-timeout')
 					if tosend < 2**16:
 						self.sendall(data[-tosend:])
@@ -127,7 +125,7 @@ class Socket(socket.socket):
 
 
 	def recv_exactly(self, size):
-		t_end = time.monotonic() + self.timeout_max
+		t_max = time.monotonic() + self.timeout_max
 		lst = []
 		while True:
 			data = self.recv(size)
@@ -137,12 +135,12 @@ class Socket(socket.socket):
 			lst.append(data)
 			if not size:
 				return b''.join(lst)
-			if t_end < time.monotonic():
+			if t_max < time.monotonic():
 				raise Timeout('max-timeout')
 
 	def recv_until(self, maxlen=2**16, end_char=b'\n'):
-		'''receives all bytes until end_char, not useable with udp'''
-		t_end = time.monotonic() + self.timeout_max
+		"""Receives all bytes until end_char, not useable with udp."""
+		t_max = time.monotonic() + self.timeout_max
 		data = bytearray()
 		for _ in range(maxlen):
 			c = self.recv(1)
@@ -150,7 +148,7 @@ class Socket(socket.socket):
 				return b''
 			if c == end_char:
 				return bytes(data)
-			if t_end < time.monotonic():
+			if t_max < time.monotonic():
 				raise Timeout('max-timeout')
 			data.extend(c)
 		raise ValueError('end character not found within {} bytes'.format(len(data)))
@@ -184,7 +182,13 @@ def get_ipv6_addrlst(hostaddr, ipv6=None):
 	return af == socket.AF_INET6, lst
 
 def find_free_addr(*args, udp=False):
-	'''first argument must be an address, followed by ports or more addresses'''
+	"""Search for a free ipv6 or ipv4 address and returns it.
+
+	First argument must be an address (ip, port) tuple,
+	followed by alternative ports or addresses.
+	Port 0 always returs a free port.
+	Set udp=True if no tcp port is needed.
+	"""
 	ip = args[0][0]
 	addrlst = (x if isinstance(x, tuple) else (ip, x) for x in args)
 	for addr in addrlst:

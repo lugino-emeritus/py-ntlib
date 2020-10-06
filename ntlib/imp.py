@@ -1,9 +1,11 @@
+"""Module to handle imports from specific paths."""
+
 import importlib as _il
 import logging
 import os
 import sys
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 try:
 	from ._imp_paths import alias_paths as _aliases
@@ -11,10 +13,6 @@ except ImportError:
 	_aliases = {}
 
 #-------------------------------------------------------
-
-def set_log_config(level=logging.INFO):
-	_il.reload(logging)
-	logging.basicConfig(format='%(levelname)-8s %(asctime)s; %(message)s', level=level)
 
 class _EnsureSysPath:
 	def __init__(self):
@@ -27,10 +25,9 @@ class _EnsureSysPath:
 	def add(self, path):
 		sys.path.insert(0, path)
 
+
 def reload(module):
-	with _EnsureSysPath() as syspath:
-		syspath.add(os.path.dirname(module.__file__))
-		_il.reload(module)
+	_il.reload(module)
 
 def import_path(modulename, path=''):
 	with _EnsureSysPath() as syspath:
@@ -45,3 +42,9 @@ def import_alias(alias, modulename):
 	if pre:
 		modulename = pre + '.' + modulename
 	return import_path(modulename, path)
+
+
+def set_log_config(level=logging.INFO):
+	"""Sets log config to 'levelname asctime; message'."""
+	_il.reload(logging)
+	logging.basicConfig(format='%(levelname)-8s %(asctime)s; %(message)s', level=level)

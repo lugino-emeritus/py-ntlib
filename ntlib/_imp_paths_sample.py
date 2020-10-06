@@ -1,8 +1,9 @@
-'''File to handle alias imports
+"""File to config alias imports.
+
 This example configuration allows e.g. the following imports:
-- imp.import_alias('mypy', 'abcde') will import abcde from DEFAULT_PATH + 'python'
-- imp.import_alias('foo_project', 'bar') imports foo.bar from DEFAULT_PATH + 'Projects'
-'''
+- imp.import_alias('mypy', 'xyz') will import xyz from DEFAULT_PATH + 'python'
+- imp.import_alias('project_foo', 'bar') imports foo.bar from DEFAULT_PATH + 'Projects'
+"""
 from sys import platform
 
 if platform.startswith('win'):
@@ -12,6 +13,7 @@ elif platform.startswith('linux'):
 else:
 	raise ImportError('DEFAULT_PATH not available for platform {}'.format(sys.platform))
 
-alias_paths = {}
-alias_paths['mypy'] = (DEFAULT_PATH + 'python', None)
-alias_paths['foo_project'] = (DEFAULT_PATH + 'Projects', 'foo')
+alias_paths = {
+	'mypy': (DEFAULT_PATH + 'python', None),
+	'project_foo': (DEFAULT_PATH + 'Projects', 'foo')
+}
