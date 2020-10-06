@@ -19,11 +19,9 @@ import otherlib.imp as other
 
 Feel free to change the code for your own purposes.
 
-It follows a short description of the modules, have a look at the source for details:
-
 ## imp
 
-Developed to handle some imports:
+Developed to handle path imports:
 
 - `reload(module)` to reload a module, useful while testing a module
 - `module = import_path(modulename, path='')` to import from specific folder, returns module
