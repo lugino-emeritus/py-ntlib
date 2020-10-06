@@ -6,7 +6,7 @@ import sounddevice as sd
 import soundfile as sf
 import threading
 
-__version__ = '0.1.2'
+__version__ = '0.1.4'
 
 _DTYPE = 'float32'  # float32 is highly recommended
 
@@ -26,6 +26,7 @@ def _alt_file(filename):
 
 class PlaySound:
 	def __init__(self, filename, device=None, ch_out_num=None):
+		"""Class to handle sound playback on specific device and channels."""
 		self._filename = _alt_file(filename)
 		self._device = device
 		self._q = queue.Queue(maxsize=_BUFFERSIZE)
@@ -177,6 +178,7 @@ class PlaySound:
 		return self._ch_in_num, self._ch_out_num
 
 	def set_vol_array(self, vol_array):
+		"""numpy array which maps input channels to output channels."""
 		vol_array = np.array(vol_array, dtype=_DTYPE)
 		if vol_array.shape != self.get_channel_num():
 			raise ValueError('vol_array (shape {}) must have shape {}'.format(vol_array.shape, self.get_channel_num()))
@@ -214,6 +216,7 @@ def create_vol_array(ch_in_out_num, mono=False, ch_out=None, vol=1):
 	return vol_array
 
 def config_ps(filename, device=None, ch_out_num=None, mono=False, ch_out=None, vol=1):
+	"""Returns PlaySound configured for playback on given device and channels ch_out."""
 	ps = PlaySound(filename, device, ch_out_num)
 	vol_array = create_vol_array(ps.get_channel_num(), mono, ch_out, vol)
 	ps.set_vol_array(vol_array)
@@ -224,8 +227,9 @@ def config_ps(filename, device=None, ch_out_num=None, mono=False, ch_out=None, v
 
 class InputVolume:
 	def __init__(self, vol_cb, vol_avg_time=0.5, device=None):
-		'''Calls vol_cb(vol) after approx. vol_avg_time
-		'''
+		"""Calls vol_cb(volume) after approx. vol_avg_time,
+		a input device can be defined.
+		"""
 		self.vol = 0
 		self._vol_cb = vol_cb
 		self._avg_time = vol_avg_time
