@@ -4,7 +4,7 @@ import subprocess as _subp
 import sys
 import threading
 
-__version__ = '0.1.3'
+__version__ = '0.1.4'
 
 logger = logging.getLogger(__name__)
 
@@ -27,8 +27,7 @@ else:
 (CMD_AUTO, CMD_EXT, CMD_SYS, CMD_FILE) = range(4)
 
 def start_app(cmd, *, cmd_type=CMD_AUTO):
-	'''Starts a new application or opens a given file.
-	'''
+	"""Starts application or file."""
 	if cmd_type == CMD_AUTO:
 		if isinstance(cmd, str):
 			cmd_type = CMD_FILE if os.path.isfile(cmd) else CMD_SYS
@@ -49,15 +48,13 @@ def start_app(cmd, *, cmd_type=CMD_AUTO):
 		return False
 
 def shell_cmd(cmd):
-	'''Processes a shell command and returns the output.
-	'''
+	"""Processes a shell command and returns the output."""
 	return _subp.run(cmd, shell=True, stdin=_subp.DEVNULL,
 		stdout=_subp.PIPE, stderr=_subp.STDOUT).stdout.decode(errors='replace')
 
 
 def start_internal_thread(target, args=(), kwargs={}):
-	'''Starts and returns a daemon thread.
-	'''
+	"""Starts and returns a daemon thread."""
 	t = threading.Thread(target=target, args=args, kwargs=kwargs, daemon=True)
 	t.start()
 	return t
