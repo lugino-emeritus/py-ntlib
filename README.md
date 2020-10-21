@@ -1,6 +1,6 @@
-# ntlib
+# NTLIB
 
-This is a set of small python3 modules developed for different projects.
+Set of python3 modules developed for different projects.
 
 It can be used e.g. by adding a \*.pth file to a python package path (e.g. site-packages) containing the path name which includes ntlib. This has the advantage of using the same modules on different systems of a dual-boot computer. Moreover it is possible to develop libraries without naming issues:
 ```
@@ -23,9 +23,9 @@ Feel free to change the code for your own purposes.
 
 Developed to handle path imports:
 
-- `reload(module)` to reload a module, useful while testing a module
+- `reload(module)` to reload a module, useful for testing
 - `module = import_path(modulename, path='')` to import from specific folder, returns module
-- `module = import_alias(alias, modulename)` it is possible to set an alias name for a folder, rename `_imp_paths_sample.py` to `_imp_paths.py` and define the `alias_path` in the file to use it.
+- `module = import_alias(alias, modulename)` it is possible to set an alias name for a folder, rename `_imp_paths_sample.py` to `_imp_paths.py` and define an `alias_path` in this file to use it.
 
 Moreover the module has a function `set_log_config(level=logging.INFO)` to set a basic config for logging.
 
