@@ -1,11 +1,10 @@
-"""Module to handle imports from specific paths."""
+"""Handle module reloads and imports from specific paths."""
 
 import importlib as _il
 import logging
-import os
 import sys
 
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 
 try:
 	from ._imp_paths import alias_paths as _aliases
@@ -40,7 +39,7 @@ def import_alias(alias, modulename):
 		raise KeyError('unknown alias')
 	path, pre = _aliases[alias]
 	if pre:
-		modulename = pre + '.' + modulename
+		modulename = '.'.join((pre, modulename))
 	return import_path(modulename, path)
 
 

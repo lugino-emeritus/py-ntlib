@@ -1,3 +1,5 @@
+"""Play sounds and check input volume."""
+
 import logging
 import numpy as np
 import os
@@ -26,7 +28,7 @@ def _alt_file(filename):
 
 class PlaySound:
 	def __init__(self, filename, device=None, ch_out_num=None):
-		"""Class to handle sound playback on specific device and channels."""
+		"""Class to handle audio playback on specific device and channels."""
 		self._filename = _alt_file(filename)
 		self._device = device
 		self._q = queue.Queue(maxsize=_BUFFERSIZE)

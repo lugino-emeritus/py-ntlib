@@ -1,3 +1,5 @@
+"""Wrapper for socket with simplified ipv6 and timeout support."""
+
 import select
 import socket
 import time
