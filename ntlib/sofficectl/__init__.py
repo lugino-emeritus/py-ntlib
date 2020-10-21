@@ -1,1 +1,1 @@
-#
+"""LibreOffice python TCP bridge"""

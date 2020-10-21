@@ -1,3 +1,5 @@
+"""Control function in separate thread."""
+
 import logging
 import os
 import subprocess as _subp
