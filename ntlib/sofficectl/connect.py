@@ -5,7 +5,7 @@ import uno
 
 from ntlib.fctthread import start_app
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 if sys.platform.startswith('win'):
 	OFFICE_START_CMD = 'C:/Program Files/LibreOffice/program/soffice.exe'
@@ -30,7 +30,7 @@ def _init_ctx(port=3103):
 			except Exception as e:
 				err = e
 		else:
-			raise err
+			raise err from None
 	return ctx.ServiceManager.createInstanceWithContext('com.sun.star.frame.Desktop', ctx)
 
 def _norm_filepath(path):

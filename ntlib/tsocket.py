@@ -169,7 +169,7 @@ def get_ipv6_addrlst(hostaddr, ipv6=None):
 	af = None if ipv6 is None else socket.AF_INET6 if ipv6 else socket.AF_INET
 	for (fam, _, _, _, addr) in socket.getaddrinfo(hostaddr[0], hostaddr[1]):
 		if fam != af:
-			if af is None and fam in (socket.AF_INET, socket.AF_INET6):
+			if af is None and fam in {socket.AF_INET, socket.AF_INET6}:
 				af = fam
 			elif ipv6 and fam == socket.AF_INET:
 				addr = ('::ffff:'+addr[0], addr[1])

@@ -8,7 +8,7 @@ import sounddevice as sd
 import soundfile as sf
 import threading
 
-__version__ = '0.1.4'
+__version__ = '0.1.5'
 
 _DTYPE = 'float32'  # float32 is highly recommended
 
@@ -51,9 +51,9 @@ class PlaySound:
 					self._init_stream(ch)
 					break
 				except sd.PortAudioError as e:
-					last_exception = e
+					err = e
 			else:
-				raise last_exception
+				raise err
 		except:
 			self._file.close()
 			raise
@@ -104,7 +104,7 @@ class PlaySound:
 			data = self._q.get_nowait()
 		except queue.Empty:
 			logger.warning('Buffer is empty: increase buffersize?')
-			raise sd.CallbackAbort
+			raise sd.CallbackAbort from None
 		if data is None:
 			raise sd.CallbackStop
 		outdata[:] = data
@@ -268,7 +268,7 @@ class InputVolume:
 			except Exception:
 				logger.exception('vol_cb raised an error, close stream')
 				self._error_stop = False
-				raise sd.CallbackAbort
+				raise sd.CallbackAbort from None
 
 	def _finished_callback(self):
 		if self._error_stop:
