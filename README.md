@@ -3,6 +3,7 @@
 Set of python3 modules developed for different projects.
 
 It can be used e.g. by adding a \*.pth file to a python package path (e.g. site-packages) containing the path name which includes ntlib. This has the advantage of using the same modules on different systems of a dual-boot computer. Moreover it is possible to develop libraries without naming issues:
+
 ```
 FOLDER-STRUCTURE:
 - this_is_a_path/defined_in_a_pth_file
@@ -27,7 +28,7 @@ Developed to handle path imports:
 - `module = import_path(modulename, path='')` to import from specific folder, returns module
 - `module = import_alias(alias, modulename)` it is possible to set an alias name for a folder, rename `_imp_paths_sample.py` to `_imp_paths.py` and define an `alias_path` in this file to use it.
 
-Moreover the module has a function `set_log_config(level=logging.INFO)` to set a basic config for logging.
+Moreover the function `set_log_config(level=logging.INFO)` is available to set a basic config for logging.
 
 
 ## fctthread
@@ -92,4 +93,4 @@ sheet[2,0] = 8  # set cell A3
 sheet[2,0]  # returns 8
 ```
 
-`to_dtime` and `from_dtime` converts LibreOffice time values to datetime in python.
+`to_dtime` and `from_dtime` converts LibreOffice time values to `datetime` in python.
