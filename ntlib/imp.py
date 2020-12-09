@@ -4,7 +4,7 @@ import importlib as _il
 import logging
 import sys
 
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 
 try:
 	from ._imp_paths import alias_paths as _aliases
@@ -43,7 +43,8 @@ def import_alias(alias, modulename):
 	return import_path(modulename, path)
 
 
-def set_log_config(level=logging.INFO):
-	"""Sets log config to 'levelname asctime; message'."""
-	_il.reload(logging)
-	logging.basicConfig(format='%(levelname)-8s %(asctime)s; %(message)s', level=level)
+def set_log_config(level=logging.INFO, fmt='', **kwargs):
+	"""Sets log config to 'level(asctime): {fmt} message'."""
+	fmt = fmt.join((' ', ' ')) if fmt else ' '
+	fmt = fmt.join(('%(levelname).1s(%(asctime)s):', '%(message)s'))
+	logging.basicConfig(format=fmt, level=level, **kwargs)

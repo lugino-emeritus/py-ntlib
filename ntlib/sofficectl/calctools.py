@@ -2,7 +2,7 @@ import datetime
 
 from .connect import connect_to
 
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 
 #-------------------------------------------------------
 
@@ -35,10 +35,10 @@ class MiniSheet:
 	def get_array(self, cell_id, end_id):
 		return get_arraydata(self.sheet, cell_id, end_id)
 
-	def __getitem__(self, ind):
-		return self.sheet[ind].DataArray[0][0]
-	def __setitem__(self, ind, val):
-		self.sheet[ind].DataArray = ((val,),)
+	def __getitem__(self, idx):
+		return self.sheet[idx].DataArray[0][0]
+	def __setitem__(self, idx, val):
+		self.sheet[idx].DataArray = ((val,),)
 
 
 _DAY0 = datetime.datetime(1899,12,30)
