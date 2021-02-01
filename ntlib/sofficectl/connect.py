@@ -5,7 +5,7 @@ import uno
 
 from ntlib.fctthread import start_app
 
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 
 if sys.platform.startswith('win'):
 	OFFICE_START_CMD = 'C:/Program Files/LibreOffice/program/soffice.exe'
@@ -53,6 +53,8 @@ def _find_doc(ctx, title, path):
 			return res[0]
 		raise ValueError('title "{}", path "{}" not unique'.format(title, path))
 	return None
+
+#-------------------------------------------------------
 
 def connect_to(name=''):
 	ctx = _init_ctx()

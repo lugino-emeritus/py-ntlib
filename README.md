@@ -24,9 +24,9 @@ Feel free to change the code for your own purposes.
 
 Developed to handle path imports:
 
-- `reload(module)` to reload a module, useful for testing
-- `module = import_path(modulename, path='')` to import from specific folder, returns module
-- `module = import_alias(alias, modulename)` it is possible to set an alias name for a folder, rename `_imp_paths_sample.py` to `_imp_paths.py` and define an `alias_path` in this file to use it.
+- `reload(module)`: reloads a module, useful for testing
+- `module = import_path(modulename, path='')`: import from specific folder, returns module
+- `module = import_alias(alias, modulename)`: it is possible to set an alias name for a folder, rename `_imp_paths_sample.py` to `_imp_paths.py` and define an `alias_path` in this file to use it.
 
 Moreover the function `set_log_config(level=logging.INFO)` is available to set a basic config for logging.
 

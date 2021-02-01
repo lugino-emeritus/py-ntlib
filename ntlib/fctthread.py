@@ -6,7 +6,7 @@ import subprocess as _subp
 import sys
 import threading
 
-__version__ = '0.1.4'
+__version__ = '0.1.5'
 
 logger = logging.getLogger(__name__)
 
@@ -26,33 +26,25 @@ else:
 	raise ImportError('platform {} not available'.format(sys.platform))
 
 
-(CMD_AUTO, CMD_EXT, CMD_SYS, CMD_FILE) = range(4)
-
-def start_app(cmd, *, cmd_type=CMD_AUTO):
-	"""Starts application or file."""
-	if cmd_type == CMD_AUTO:
-		if isinstance(cmd, str):
-			cmd_type = CMD_FILE if os.path.isfile(cmd) else CMD_SYS
-		else:
-			cmd_type = CMD_EXT
-	try:
-		if cmd_type == CMD_EXT:
-			_popen_ext(cmd)
-		elif cmd_type == CMD_SYS:
-			_popen_ext(cmd, shell=True)
-		elif cmd_type == CMD_FILE:
-			_start_file(cmd)
-		else:
-			raise ValueError('unknown cmd_type')
-		return True
-	except Exception:
-		logger.exception('not possible to start program (type={}) with command {}'.format(cmd_type, cmd))
-		return False
-
 def shell_cmd(cmd):
 	"""Processes a shell command and returns the output."""
 	return _subp.run(cmd, shell=True, stdin=_subp.DEVNULL,
 		stdout=_subp.PIPE, stderr=_subp.STDOUT).stdout.decode(errors='replace')
+
+
+def start_app(cmd):
+	"""Starts application or file."""
+	try:
+		if not isinstance(cmd, str):
+			_popen_ext(cmd)
+		elif os.path.isfile(cmd):
+			_start_file(cmd)
+		else:
+			_popen_ext(cmd, shell=True)
+		return True
+	except Exception:
+		logger.exception('not possible to start app with command: %s', cmd)
+		return False
 
 
 def start_internal_thread(target, args=(), kwargs={}):
