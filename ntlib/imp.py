@@ -45,6 +45,5 @@ def import_alias(alias, modulename):
 
 def set_log_config(level=logging.INFO, fmt='', **kwargs):
 	"""Sets log config to 'level(asctime): {fmt} message'."""
-	fmt = fmt.join((' ', ' ')) if fmt else ' '
-	fmt = fmt.join(('%(levelname).1s(%(asctime)s):', '%(message)s'))
+	fmt = ' '.join(x for x in ('%(levelname).1s(%(asctime)s):', fmt, '%(message)s') if x)
 	logging.basicConfig(format=fmt, level=level, **kwargs)

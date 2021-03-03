@@ -1,1 +1,1 @@
-"""Lib developed by NTI."""
+"""Library developed by NTI."""

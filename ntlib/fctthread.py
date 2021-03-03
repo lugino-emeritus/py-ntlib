@@ -1,12 +1,13 @@
-"""Control function in separate thread."""
+"""Control functions in separate threads."""
 
 import logging
 import os
+import queue
 import subprocess as _subp
 import sys
 import threading
 
-__version__ = '0.1.5'
+__version__ = '0.2.1'
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,6 @@ def shell_cmd(cmd):
 	return _subp.run(cmd, shell=True, stdin=_subp.DEVNULL,
 		stdout=_subp.PIPE, stderr=_subp.STDOUT).stdout.decode(errors='replace')
 
-
 def start_app(cmd):
 	"""Starts application or file."""
 	try:
@@ -46,8 +46,7 @@ def start_app(cmd):
 		logger.exception('not possible to start app with command: %s', cmd)
 		return False
 
-
-def start_internal_thread(target, args=(), kwargs={}):
+def start_internal_thread(target, args=(), kwargs=None):
 	"""Starts and returns a daemon thread."""
 	t = threading.Thread(target=target, args=args, kwargs=kwargs, daemon=True)
 	t.start()
@@ -56,84 +55,163 @@ def start_internal_thread(target, args=(), kwargs={}):
 #-------------------------------------------------------
 
 class ThreadLoop:
-	"""Class to control function in separate thread.
+	"""Class to control function in a daemon thread.
 
-	Loops over target(cont_task, req_stop) until calling stop or the target calls req_stop.
-	Example:
-
-	def target(cont_task, req_stop):
-		i = 0
-		while cont_task():
-			i += 1
-			print(i)
-			time.sleep(1)
-			if i >= 5:
-				req_stop()
-		print('done')
-	thread_loop = ThreadLoop(target)
+	Loops over target() until calling stop or the target returns True
 	"""
-
 	def __init__(self, target):
 		self._t = None
 		self._target = target
 
-		self._lock = threading.Lock()
-		self._should_run = False
 		self._start_flag = False
+		self._should_run = False
+		self._stop_flag = False
+
 		self._stop_error = None
+		self._lock = threading.Lock()
+
+	@property
+	def target(self):
+		return self._target
 
 	@property
 	def stop_error(self):
 		return self._stop_error
 
-	def join(self, timeout=None, *, check=True):
+	def _handle(self):
+		while True:
+			try:
+				while self._should_run and not self._start_flag:
+					if self._target():
+						logger.debug('ThreadLoop stop request')
+						break
+			except Exception as e:
+				logger.exception('ThreadLoop unexpected error')
+				self._stop_error = e
+			with self._lock:
+				if self._start_flag:
+					self._start_flag = False
+					self._should_run = True
+				else:
+					self._should_run = False
+					self._stop_flag = True
+					return
+
+	def is_alive(self):
+		return self._t.is_alive() if self._t else False
+
+	def join(self, timeout=None, *, check=False):
 		if self._t:
 			self._t.join(timeout)
 		if check and self._stop_error is not None:
 			raise self._stop_error
 
-	def is_alive(self):
-		return self._t.is_alive() if self._t else False
-
-	def is_healthy(self):
-		return self._stop_error is None and self.is_alive() == self._should_run
-
-
-	def _cont_task(self):
-		if self._start_flag:
-			self._start_flag = False
-		return self._should_run
-
-	def _req_stop(self):
-		with self._lock:
-			if not self._start_flag:
-				self._should_run = False
-			return not self._should_run
-
-	def _handle(self):
-		self._should_run = True
-		self._stop_error = None
-		try:
-			self._target(self._cont_task, self._req_stop)
-		except Exception as e:
-			logger.exception('thread stopped unexpected')
-			self._stop_error = e
-
-
 	def start(self):
-		if self.is_alive():
-			if self._start_flag:
-				return
-			with self._lock:
-				self._start_flag = True
-				if self._should_run:
-					return
-			self._t.join(1)
 		with self._lock:
+			self._start_flag = True
+			if self._stop_flag:
+				self.join()
 			if not self.is_alive():
+				self._should_run = True
+				self._stop_flag = False
+				self._stop_error = None
 				self._t = start_internal_thread(self._handle)
 
 	def stop(self, timeout=None):
-		if self._req_stop():
-			self._t.join(timeout)
+		with self._lock:
+			self._start_flag = False
+			self._should_run = False
+		self.join(timeout)
 		return not self.is_alive()
+
+#-------------------------------------------------------
+
+class QueueWorker:
+	"""Class to process elements from a queue in separate threads.
+
+	If a thread is not called within timeout seconds it will be stopped.
+	"""
+	def __init__(self, target, maxthreads=2, *, timeout=30):
+		self._target = target
+		if maxthreads <= 0:
+			raise ValueError('number of threads needs to be at least 1')
+		self._maxthreads = maxthreads
+		if timeout < 0:
+			raise ValueError('timeout must be a nonnegative number')
+		self._timeout = timeout
+
+		self._enabled = False
+		self._active_loops = 0
+
+		self._q = queue.Queue(maxthreads)
+		self._lock = threading.Lock()
+		self._all_done = threading.Condition(self._lock)
+
+	@property
+	def target(self):
+		return self._target
+
+	def _start_thread(self):
+		assert self._lock.locked()
+		threading.Thread(target=self._handle, daemon=True).start()
+		self._active_loops += 1
+
+	def _handle(self):
+		while True:
+			sick = True
+			try:
+				while self._enabled:
+					x = self._q.get(timeout=self._timeout)
+					try:
+						self._target(x)
+					except Exception as e:
+						logger.warning('QueueWorker target call failed: %r', e)
+					finally:
+						self._q.task_done()
+				sick = False
+			except queue.Empty:
+				sick = False
+			except Exception:
+				logger.exception('QueueWorker handle failed')
+			finally:
+				with self._lock:
+					if sick or not self._enabled or self._active_loops > self._q.unfinished_tasks:
+						self._active_loops -= 1
+						self._all_done.notify_all()
+						return
+
+	def put(self, x, timeout=None):
+		self._q.put(x, timeout=timeout)
+		if self._enabled:
+			with self._lock:
+				if self._active_loops < self._maxthreads and self._active_loops < self._q.unfinished_tasks:
+					self._start_thread()
+
+	def join(self, timeout=None):
+		with self._all_done:
+			self._all_done.wait_for(lambda:self._active_loops<=0, timeout)
+
+	def is_alive(self):
+		return self._enabled
+
+	def start(self):
+		with self._lock:
+			if self._enabled:
+				return
+			qsize = self._q.qsize()
+			if self._active_loops < 0 or (qsize and self._active_loops > 0):
+				logger.critical('QueueWorker start: %d active loops, %d waiting', self._active_loops, qsize)
+				self._active_loops = 0
+			self._enabled = True
+			for _ in range(qsize):
+				self._start_thread()
+
+	def stop(self, timeout=None):
+		with self._lock:
+			self._enabled = False
+		self.join(timeout)
+		return self._active_loops == 0
+
+	def info(self):
+		return {'enabled': self._enabled, 'loops': self._active_loops,
+			'unfinished': self._q.unfinished_tasks, 'waiting': self._q.qsize()}

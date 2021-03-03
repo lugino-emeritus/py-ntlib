@@ -7,7 +7,7 @@ __version__ = '0.1.3'
 #-------------------------------------------------------
 
 def get_msheet_dic(model):
-	return {s.Name:MiniSheet(s) for s in model.Sheets}
+	return {s.Name: MiniSheet(s) for s in model.Sheets}
 
 def get_sheet_cell(sheet, cell_id):
 	return sheet.getCellRangeByName(cell_id) if isinstance(cell_id, str) else \

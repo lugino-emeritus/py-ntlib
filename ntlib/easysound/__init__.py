@@ -8,7 +8,7 @@ import sounddevice as sd
 import soundfile as sf
 import threading
 
-__version__ = '0.1.5'
+__version__ = '0.1.6'
 
 _DTYPE = 'float32'  # float32 is highly recommended
 
@@ -92,7 +92,7 @@ class PlaySound:
 				self._q.queue.clear()
 		for _ in range(_BUFFERFILL - self._q.qsize()):
 			data = self._get_modified_sound_data()
-			self._q.put_nowait(data)
+			self._q.put(data, timeout=0)
 			if data is None:
 				break
 
@@ -101,7 +101,7 @@ class PlaySound:
 			logger.error('status in callback: %r', status)
 			raise sd.CallbackAbort
 		try:
-			data = self._q.get_nowait()
+			data = self._q.get(timeout=0)
 		except queue.Empty:
 			logger.warning('Buffer is empty: increase buffersize?')
 			raise sd.CallbackAbort from None
@@ -150,6 +150,7 @@ class PlaySound:
 
 	def is_alive(self):
 		return self._t.is_alive() if self._t else False
+
 	def join(self, timeout=None):
 		if self._t is None:
 			return
@@ -161,6 +162,7 @@ class PlaySound:
 		self._t = threading.Thread(target=self._play, daemon=True)
 		self._t.start()
 		return self.is_alive()
+
 	def stop(self, timeout=None):
 		if not self.is_alive():
 			return True

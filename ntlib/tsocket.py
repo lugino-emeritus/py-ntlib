@@ -2,16 +2,17 @@
 
 import select
 import socket
+import sys
 import time
 
 from socket import (timeout as Timeout, gaierror as GAIError)
 
-__version__ = '0.2.7'
+__version__ = '0.2.11'
 
 _TIMEOUT_MAX = 30  # used for udp or while waiting for a message
 _TIMEOUT_MID = 2  # timeout for connected tcp socket
 
-USE_IPV6 = socket.has_ipv6
+HAS_IPV6 = socket.has_ipv6
 
 #-------------------------------------------------------
 
@@ -48,43 +49,13 @@ class Socket(socket.socket):
 			self.settimeout(timeout or _TIMEOUT_MAX)
 
 		self._ensure_timeout = _EnsureTimeout(self)
-		self.timeout_max = _TIMEOUT_MAX
-
-	def ensure_timeout(self):
-		return self._ensure_timeout
+		self.maxtimeout = _TIMEOUT_MAX
 
 	def is_ipv6(self):
 		return self.family == socket.AF_INET6
 
-	def data_available(self, timeout=None):
-		return select.select((self,), (), (), timeout or self.timeout_max)[0]
-
-
-	def clear_buffer(self, timeout=1, *, esc_data=None):
-		"""Clear input buffer of socket.
-
-		Returns True if a timeout occurs,
-			False if there is more data to read.
-
-		The socket will send esc_data if defined before receiving data,
-			e.g. esc_data=b'\n'.
-		"""
-		with self._ensure_timeout:
-			t_max = time.monotonic() + self.timeout_max
-			self.settimeout(timeout)
-			try:
-				while time.monotonic() < t_max:
-					if esc_data:
-						try:
-							self.send(esc_data)
-						except Timeout:
-							esc_data = None
-					if not self.recv(2**16):
-						return True
-			except Timeout:
-				return True
-			return False
-
+	def get_addrlst(self, hostaddr):
+		return get_ipv6_addrlst(hostaddr, self.is_ipv6())[1]
 
 	def accept(self):
 		"""Returns (tsocket.Socket, addr)."""
@@ -95,10 +66,16 @@ class Socket(socket.socket):
 		(sock, addr) = super().accept()
 		return self.__class__(sock, timeout=timeout), addr
 
+	def data_available(self, timeout=None):
+		return select.select((self,), (), (), timeout or self.maxtimeout)[0]
+
+	def ensure_timeout(self):
+		return self._ensure_timeout
+
 
 	def tsend(self, data):
-		"""Sends all data within timeout_max."""
-		t_max = time.monotonic() + self.timeout_max
+		"""Sends all data within maxtimeout."""
+		t_max = time.monotonic() + self.maxtimeout
 		tosend = len(data)
 		while tosend:
 			if tosend < 2**16:
@@ -113,7 +90,7 @@ class Socket(socket.socket):
 		if totalen < 2**16:
 			self.sendall(b''.join(lst))
 		else:
-			t_max = time.monotonic() + self.timeout_max
+			t_max = time.monotonic() + self.maxtimeout
 			for data in lst:
 				tosend = len(data)
 				while tosend:
@@ -125,9 +102,8 @@ class Socket(socket.socket):
 					tosend -= self.send(data[-tosend:])
 		return totalen
 
-
 	def recv_exactly(self, size):
-		t_max = time.monotonic() + self.timeout_max
+		t_max = time.monotonic() + self.maxtimeout
 		lst = []
 		while True:
 			data = self.recv(size)
@@ -142,7 +118,7 @@ class Socket(socket.socket):
 
 	def recv_until(self, maxlen=2**16, end_char=b'\n'):
 		"""Receives all bytes until end_char, not useable with udp."""
-		t_max = time.monotonic() + self.timeout_max
+		t_max = time.monotonic() + self.maxtimeout
 		data = bytearray()
 		for _ in range(maxlen):
 			c = self.recv(1)
@@ -155,8 +131,30 @@ class Socket(socket.socket):
 			data.extend(c)
 		raise ValueError('end character not found within {} bytes'.format(len(data)))
 
-	def get_addrlst(self, hostaddr):
-		return get_ipv6_addrlst(hostaddr, self.is_ipv6())[1]
+	def clear_buffer(self, timeout=1, *, esc_data=None):
+		"""Clear input buffer of socket.
+
+		Returns True if a timeout occurs,
+			False if there is more data to read.
+
+		The socket will send esc_data if defined before receiving data,
+			e.g. esc_data=b'\n'.
+		"""
+		with self._ensure_timeout:
+			t_max = time.monotonic() + self.maxtimeout
+			self.settimeout(timeout)
+			try:
+				while time.monotonic() < t_max:
+					if esc_data:
+						try:
+							self.send(esc_data)
+						except Timeout:
+							esc_data = None
+					if not self.recv(2**16):
+						return True
+			except Timeout:
+				return True
+			return False
 
 #-------------------------------------------------------
 
@@ -194,9 +192,9 @@ def find_free_addr(*args, udp=False):
 	ip = args[0][0]
 	addrlst = (x if isinstance(x, tuple) else (ip, x) for x in args)
 	for addr in addrlst:
-		with Socket(ipv6=is_ipv6_addr(addr)[0] if addr[0] else USE_IPV6, udp=udp) as sock:
+		with Socket(ipv6=is_ipv6_addr(addr)[0] if addr[0] else HAS_IPV6, udp=udp) as sock:
 			try:
-				if not addr[0] and USE_IPV6: setsockopt_ipv6only(sock, False)
+				if not addr[0] and HAS_IPV6: setsockopt_ipv6only(sock, False)
 				sock.bind(addr)
 				return (addr[0], sock.getsockname()[1])
 			except OSError:
@@ -204,15 +202,19 @@ def find_free_addr(*args, udp=False):
 	return None
 
 
-def create_serversock(port, udp=False, reuseaddr=None):
-	if USE_IPV6:
-		sock = Socket(ipv6=True, udp=udp)
-		setsockopt_ipv6only(sock, False)
+def create_serversock(addr, *, udp=False, reuseaddr=None):
+	if addr[0]:
+		ipv6, addr = is_ipv6_addr(addr)
 	else:
-		sock = Socket(ipv6=False, udp=udp)
+		ipv6 = HAS_IPV6
+	sock = Socket(ipv6=ipv6, udp=udp)
+	if HAS_IPV6 and not addr[0]:
+		setsockopt_ipv6only(sock, False)
 	if reuseaddr is not None:
 		setsockopt_reuseaddr(sock, reuseaddr)
-	sock.bind(('', port))
+	if sys.platform.startswith('win'):
+		sock.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 0 if reuseaddr else 1)
+	sock.bind(addr)
 	return sock
 
 def create_connection(address, timeout=_TIMEOUT_MAX, source_address=None):
@@ -223,8 +225,8 @@ def create_connection(address, timeout=_TIMEOUT_MAX, source_address=None):
 def setsockopt_ipv6only(sock, v6only):
 	sock.setsockopt(getattr(socket, 'IPPROTO_IPV6', 41), socket.IPV6_V6ONLY, 1 if v6only else 0)
 
-def setsockopt_broadcast(sock, enable):
-	sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1 if enable else 0)
-
 def setsockopt_reuseaddr(sock, enable):
 	sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1 if enable else 0)
+
+def setsockopt_broadcast(sock, enable):
+	sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1 if enable else 0)
