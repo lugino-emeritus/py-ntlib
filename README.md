@@ -1,8 +1,8 @@
 # NTLIB
 
-Set of python3 modules developed for different projects.
+Set of python3 (3.6+) modules developed for different projects.
 
-It can be used by adding a \*.pth file to a python package path (e.g. site-packages) containing the path to a folder which includes the library. This has the advantage of using the same modules on different systems of a dual-boot PC. Furthermore, this allows the development of libraries without naming issues.
+It can be used by adding a \*.pth file to a python package path (e.g. site-packages) containing the path to a folder which includes the library. This has the advantage of using the same modules on different systems of a dual-boot computer. Furthermore, this allows the development of libraries without naming issues.
 
 ```
 FOLDER STRUCTURE:
@@ -39,8 +39,6 @@ Allows system commands (`shell_cmd`, `start_app`), and provides different classe
 - `ThreadLoop`: execute a method repeatedly
 - `CmpEvent`: receive data from another thread after a successful comparison
 - `QueueWorker`: parallel element processing
-
-*Note:* version 0.2.0 changed ThreadLoop target.
 
 
 ## tsocket
