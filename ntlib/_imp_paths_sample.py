@@ -11,7 +11,7 @@ if platform.startswith('win'):
 elif platform.startswith('linux'):
 	DEFAULT_PATH = '/media/user/data/myfolder'
 else:
-	raise ImportError('DEFAULT_PATH not available for platform {}'.format(sys.platform))
+	raise ImportError(f'DEFAULT_PATH not available for platform {sys.platform}')
 
 alias_paths = {
 	'mypy': (DEFAULT_PATH + 'python', None),

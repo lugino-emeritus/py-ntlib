@@ -7,7 +7,7 @@ import time
 
 from socket import (timeout as Timeout, gaierror as GAIError)
 
-__version__ = '0.2.11'
+__version__ = '0.2.13'
 
 _TIMEOUT_MAX = 30  # used for udp or while waiting for a message
 _TIMEOUT_MID = 2  # timeout for connected tcp socket
@@ -83,7 +83,7 @@ class Socket(socket.socket):
 				break
 			tosend -= self.send(data[-tosend:])
 			if t_max < time.monotonic():
-				raise Timeout('tsend max-timeout, not sent: {} bytes'.format(tosend))
+				raise Timeout(f'tsend maxtimeout, not sent: {tosend} bytes')
 
 	def send_list(self, lst):
 		totalen = sum(map(len, lst))
@@ -95,7 +95,7 @@ class Socket(socket.socket):
 				tosend = len(data)
 				while tosend:
 					if t_max < time.monotonic():
-						raise Timeout('max-timeout')
+						raise Timeout('maxtimeout')
 					if tosend < 2**16:
 						self.sendall(data[-tosend:])
 						break
@@ -114,7 +114,7 @@ class Socket(socket.socket):
 			if not size:
 				return b''.join(lst)
 			if t_max < time.monotonic():
-				raise Timeout('max-timeout')
+				raise Timeout('maxtimeout')
 
 	def recv_until(self, maxlen=2**16, end_char=b'\n'):
 		"""Receives all bytes until end_char, not useable with udp."""
@@ -127,9 +127,9 @@ class Socket(socket.socket):
 			if c == end_char:
 				return bytes(data)
 			if t_max < time.monotonic():
-				raise Timeout('max-timeout')
+				raise Timeout('maxtimeout')
 			data.extend(c)
-		raise ValueError('end character not found within {} bytes'.format(len(data)))
+		raise ValueError(f'end character not found within {len(data)} bytes')
 
 	def clear_buffer(self, timeout=1, *, esc_data=None):
 		"""Clear input buffer of socket.
@@ -178,7 +178,7 @@ def get_ipv6_addrlst(hostaddr, ipv6=None):
 		if addr not in lst:
 			lst.append(addr)
 	if not lst:
-		raise GAIError('no ip address found for {}'.format(hostaddr))
+		raise GAIError(f'no ip address found for {hostaddr}')
 	return af == socket.AF_INET6, lst
 
 def find_free_addr(*args, udp=False):

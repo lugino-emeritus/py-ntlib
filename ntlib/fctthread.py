@@ -1,4 +1,4 @@
-"""Control functions in separate threads."""
+"""Control methods in separate threads."""
 
 import logging
 import os
@@ -7,7 +7,7 @@ import subprocess as _subp
 import sys
 import threading
 
-__version__ = '0.2.1'
+__version__ = '0.2.4'
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ elif sys.platform.startswith('linux'):
 	def _start_file(cmd):
 		_popen_ext(['xdg-open', cmd])
 else:
-	raise ImportError('platform {} not available'.format(sys.platform))
+	raise ImportError(f'platform {sys.platform} not available')
 
 
 def shell_cmd(cmd):
@@ -57,26 +57,20 @@ def start_internal_thread(target, args=(), kwargs=None):
 class ThreadLoop:
 	"""Class to control function in a daemon thread.
 
-	Loops over target() until calling stop or the target returns True
+	Loops over target() until calling stop or the target returns True.
 	"""
 	def __init__(self, target):
 		self._t = None
 		self._target = target
+		self._lock = threading.Lock()
 
 		self._start_flag = False
 		self._should_run = False
 		self._stop_flag = False
 
-		self._stop_error = None
-		self._lock = threading.Lock()
-
 	@property
 	def target(self):
 		return self._target
-
-	@property
-	def stop_error(self):
-		return self._stop_error
 
 	def _handle(self):
 		while True:
@@ -85,9 +79,8 @@ class ThreadLoop:
 					if self._target():
 						logger.debug('ThreadLoop stop request')
 						break
-			except Exception as e:
-				logger.exception('ThreadLoop unexpected error')
-				self._stop_error = e
+			except Exception:
+				logger.exception('ThreadLoop callback error')
 			with self._lock:
 				if self._start_flag:
 					self._start_flag = False
@@ -100,11 +93,9 @@ class ThreadLoop:
 	def is_alive(self):
 		return self._t.is_alive() if self._t else False
 
-	def join(self, timeout=None, *, check=False):
+	def join(self, timeout=None):
 		if self._t:
 			self._t.join(timeout)
-		if check and self._stop_error is not None:
-			raise self._stop_error
 
 	def start(self):
 		with self._lock:
@@ -112,9 +103,7 @@ class ThreadLoop:
 			if self._stop_flag:
 				self.join()
 			if not self.is_alive():
-				self._should_run = True
 				self._stop_flag = False
-				self._stop_error = None
 				self._t = start_internal_thread(self._handle)
 
 	def stop(self, timeout=None):
@@ -123,6 +112,45 @@ class ThreadLoop:
 			self._should_run = False
 		self.join(timeout)
 		return not self.is_alive()
+
+#-------------------------------------------------------
+
+class CmpEvent:
+	"""Class to receive data from another thread after a successful comparison.
+
+	This data is accessible with obj.result.
+	An optional answer can be sent to the compare thread.
+	"""
+	def __init__(self):
+		self._cond = threading.Condition(threading.Lock())
+		self._waiting = False
+		self._answer = None
+		self._cmpval = None
+		self.result = None
+
+	def init(self, cmpval, answer=True):
+		with self._cond:
+			self.result = None
+			self._answer = answer
+			self._cmpval = cmpval
+			self._waiting = True
+
+	def wait(self, timeout=None):
+		"""Returns False while waiting for a match, True otherwise."""
+		with self._cond:
+			if self._waiting:
+				return self._cond.wait(timeout)
+			return True
+
+	def compare(self, cmpval, result):
+		if self._waiting:
+			with self._cond:
+				if cmpval == self._cmpval:
+					self.result = result
+					self._cond.notify_all()
+					self._waiting = False
+					return self._answer
+		return None
 
 #-------------------------------------------------------
 
@@ -142,7 +170,6 @@ class QueueWorker:
 
 		self._enabled = False
 		self._active_loops = 0
-
 		self._q = queue.Queue(maxthreads)
 		self._lock = threading.Lock()
 		self._all_done = threading.Condition(self._lock)
@@ -165,14 +192,12 @@ class QueueWorker:
 					try:
 						self._target(x)
 					except Exception as e:
-						logger.warning('QueueWorker target call failed: %r', e)
+						logger.warning('QueueWorker callback error: %r', e)
 					finally:
 						self._q.task_done()
 				sick = False
 			except queue.Empty:
 				sick = False
-			except Exception:
-				logger.exception('QueueWorker handle failed')
 			finally:
 				with self._lock:
 					if sick or not self._enabled or self._active_loops > self._q.unfinished_tasks:

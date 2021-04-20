@@ -5,7 +5,7 @@ import uno
 
 from ntlib.fctthread import start_app
 
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 
 if sys.platform.startswith('win'):
 	OFFICE_START_CMD = 'C:/Program Files/LibreOffice/program/soffice.exe'
@@ -17,11 +17,11 @@ else:
 def _init_ctx(port=3103):
 	lctx = uno.getComponentContext()  # local context
 	resolver = lctx.ServiceManager.createInstanceWithContext('com.sun.star.bridge.UnoUrlResolver', lctx)
-	resolve_param = 'uno:socket,host=localhost,port={};urp;StarOffice.ComponentContext'.format(port)
+	resolve_param = f'uno:socket,host=localhost,port={port};urp;StarOffice.ComponentContext'
 	try:
 		ctx = resolver.resolve(resolve_param)
 	except Exception:
-		start_app((OFFICE_START_CMD, '--accept=socket,host=localhost,port={};urp;StarOffice.ServiceManager'.format(port)))
+		start_app((OFFICE_START_CMD, f'--accept=socket,host=localhost,port={port};urp;StarOffice.ServiceManager'))
 		for _ in range(10):
 			time.sleep(1)
 			try:
@@ -51,7 +51,7 @@ def _find_doc(ctx, title, path):
 	if res:
 		if len(res) == 1:
 			return res[0]
-		raise ValueError('title "{}", path "{}" not unique'.format(title, path))
+		raise ValueError(f'title {title}, path {path} not unique')
 	return None
 
 #-------------------------------------------------------
@@ -63,7 +63,7 @@ def connect_to(name=''):
 	if model:
 		return model
 	if not os.path.isfile(path):
-		raise ValueError('file {} does not exist'.format(path))
+		raise ValueError(f'file {path} does not exist')
 	start_app((OFFICE_START_CMD, path))
 	for _ in range(10):
 		time.sleep(1)

@@ -8,7 +8,7 @@ import sounddevice as sd
 import soundfile as sf
 import threading
 
-__version__ = '0.1.6'
+__version__ = '0.1.7'
 
 _DTYPE = 'float32'  # float32 is highly recommended
 
@@ -185,7 +185,7 @@ class PlaySound:
 		"""numpy array which maps input channels to output channels."""
 		vol_array = np.array(vol_array, dtype=_DTYPE)
 		if vol_array.shape != self.get_channel_num():
-			raise ValueError('vol_array (shape {}) must have shape {}'.format(vol_array.shape, self.get_channel_num()))
+			raise ValueError(f'vol_array (shape {vol_array.shape}) must have shape {self.get_channel_num()}')
 		self._vol_array = vol_array
 
 	def _get_modified_sound_data(self):
@@ -216,7 +216,7 @@ def create_vol_array(ch_in_out_num, mono=False, ch_out=None, vol=1):
 	if mono:
 		a = np.ones((ch_in_num, ch_in_num), dtype=_DTYPE) / ch_in_num
 		vol_array = np.matmul(a, vol_array)
-	logging.debug('vol_array:\n{}'.format(vol_array))
+	logging.debug(f'vol_array:\n{vol_array}')
 	return vol_array
 
 def config_ps(filename, device=None, ch_out_num=None, mono=False, ch_out=None, vol=1):
@@ -249,8 +249,8 @@ class InputVolume:
 		self._vol_fact = self.stream.blocksize / (self.stream.samplerate * self._avg_time)
 		if self._vol_fact >= 1:
 			self.close()
-			raise ValueError('vol_avg_time is too short for given blocksize ({}) and samplerate ({})'.format(
-				self.stream.blocksize, self.stream.samplerate))
+			raise ValueError(f'vol_avg_time is too short for given blocksize ({self.stream.blocksize}) '
+				f'and samplerate ({self.stream.samplerate})')
 		self._cb_repeat = int(0.75 / self._vol_fact - 1)
 		self._cb_cnt = self._cb_repeat
 

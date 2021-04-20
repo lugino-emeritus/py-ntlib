@@ -35,7 +35,11 @@ Moreover the function `set_log_config(level=logging.INFO)` is available to set a
 
 ## fctthread
 
-Allows system commands (`shell_cmd`, `start_app`), helps to handle threads (`ThreadLoop`), and provides a `QueueWorker` to process elements in separate threads. \
+Allows system commands (`shell_cmd`, `start_app`), and provides different classes to work with threads:
+- `ThreadLoop`: execute a method repeatedly
+- `CmpEvent`: receive data from another thread after a successful comparison
+- `QueueWorker`: parallel element processing
+
 *Note:* version 0.2.0 changed ThreadLoop target.
 
 
