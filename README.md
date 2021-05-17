@@ -1,6 +1,6 @@
 # NTLIB
 
-Set of python3 (3.6+) modules developed for different projects.
+Collection of python (3.6+) modules developed for various projects.
 
 It can be used by adding a \*.pth file to a python package path (e.g. site-packages) containing the path to a folder which includes the library. This has the advantage of using the same modules on different systems of a dual-boot computer. Furthermore, this allows the development of libraries without naming issues.
 
@@ -20,7 +20,8 @@ import ntlib.imp as ntimp
 import otherlib.imp as other
 ```
 
-More details can be found in the source code. Feel free to modify the code for your own purposes.
+More details can be found in the source code. Feel free to modify it for your own purposes.
+
 
 ## imp
 
