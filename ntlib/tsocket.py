@@ -1,4 +1,4 @@
-"""Wrapper for socket with simplified ipv6 and timeout support."""
+"""Socket wrapper with simplified ipv6 and timeout support."""
 
 import select
 import socket
@@ -7,7 +7,7 @@ import time
 
 from socket import (timeout as Timeout, gaierror as GAIError)
 
-__version__ = '0.2.13'
+__version__ = '0.2.14'
 
 _TIMEOUT_MAX = 30  # used for udp or while waiting for a message
 _TIMEOUT_MID = 2  # timeout for connected tcp socket
@@ -58,11 +58,11 @@ class Socket(socket.socket):
 		return get_ipv6_addrlst(hostaddr, self.is_ipv6())[1]
 
 	def accept(self):
-		"""Returns (tsocket.Socket, addr)."""
+		"""Return (tsocket.Socket, addr)."""
 		(sock, addr) = super().accept()
 		return self.__class__(sock, timeout=self.timeout), addr
 	def taccept(self, timeout=_TIMEOUT_MID):
-		"""Same as accept, but also sets a different timeout."""
+		"""Same as accept, but sets a different timeout."""
 		(sock, addr) = super().accept()
 		return self.__class__(sock, timeout=timeout), addr
 
@@ -74,7 +74,7 @@ class Socket(socket.socket):
 
 
 	def tsend(self, data):
-		"""Sends all data within maxtimeout."""
+		"""Send all data within maxtimeout."""
 		t_max = time.monotonic() + self.maxtimeout
 		tosend = len(data)
 		while tosend:
@@ -117,7 +117,7 @@ class Socket(socket.socket):
 				raise Timeout('maxtimeout')
 
 	def recv_until(self, maxlen=2**16, end_char=b'\n'):
-		"""Receives all bytes until end_char, not useable with udp."""
+		"""Receive all bytes until end_char, not useable with udp."""
 		t_max = time.monotonic() + self.maxtimeout
 		data = bytearray()
 		for _ in range(maxlen):
@@ -182,7 +182,7 @@ def get_ipv6_addrlst(hostaddr, ipv6=None):
 	return af == socket.AF_INET6, lst
 
 def find_free_addr(*args, udp=False):
-	"""Search for a free ipv6 or ipv4 address and returns it.
+	"""Get a free ipv6 or ipv4 address.
 
 	First argument must be an address (ip, port) tuple,
 	followed by alternative ports or addresses.

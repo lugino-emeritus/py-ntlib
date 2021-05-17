@@ -1,4 +1,4 @@
-"""Play sounds and check input volume."""
+"""Playback sounds or check input volume."""
 
 import logging
 import numpy as np
@@ -8,7 +8,7 @@ import sounddevice as sd
 import soundfile as sf
 import threading
 
-__version__ = '0.1.7'
+__version__ = '0.1.9'
 
 _DTYPE = 'float32'  # float32 is highly recommended
 
@@ -59,10 +59,9 @@ class PlaySound:
 			raise
 
 		self._ch_out_num = self.stream.channels
-		self._vol_array = np.eye(self._ch_in_num, self._ch_out_num, dtype=_DTYPE)
-
 		if ch_out_num and ch_out_num != self._ch_out_num:
 			logger.warning('%d channels not work, using %d channels', ch_out_num, self._ch_out_num)
+		self._vol_array = np.eye(self._ch_in_num, self._ch_out_num, dtype=_DTYPE)
 		logger.debug('initialized: %s', self.info())
 
 	def _init_stream(self, ch_out_num):
@@ -104,8 +103,10 @@ class PlaySound:
 			data = self._q.get(timeout=0)
 		except queue.Empty:
 			logger.warning('Buffer is empty: increase buffersize?')
-			raise sd.CallbackAbort from None
+			outdata[:] = 0
+			return
 		if data is None:
+			outdata[:] = 0
 			raise sd.CallbackStop
 		outdata[:] = data
 
@@ -135,13 +136,14 @@ class PlaySound:
 				self.stream.start()
 			while self._should_run:
 				data = self._get_modified_sound_data()
-				self._q.put(data, timeout=self._q_timeout)
 				if data is None:
+					self._q.put(0, timeout=self._q_timeout)
+					self._q.put(None, timeout=self._q_timeout)
 					break
+				self._q.put(data, timeout=self._q_timeout)
 			else:
 				self.stream.stop()
 			self._sound_played.wait(self._q_timeout)
-			self.stream.stop()
 			self._should_run = False
 		except Exception as e:
 			if self._should_run or not isinstance(e, queue.Full):
@@ -220,7 +222,7 @@ def create_vol_array(ch_in_out_num, mono=False, ch_out=None, vol=1):
 	return vol_array
 
 def config_ps(filename, device=None, ch_out_num=None, mono=False, ch_out=None, vol=1):
-	"""Returns PlaySound configured for playback on given device and channels ch_out."""
+	"""Return PlaySound configured to use a given device and channels."""
 	ps = PlaySound(filename, device, ch_out_num)
 	vol_array = create_vol_array(ps.get_channel_num(), mono, ch_out, vol)
 	ps.set_vol_array(vol_array)
@@ -231,9 +233,7 @@ def config_ps(filename, device=None, ch_out_num=None, mono=False, ch_out=None, v
 
 class InputVolume:
 	def __init__(self, vol_cb, vol_avg_time=0.5, device=None):
-		"""Calls vol_cb(volume) after approx. vol_avg_time,
-		a input device can be defined.
-		"""
+		"""Call vol_cb(volume) after approx. vol_avg_time, an input device can be selected."""
 		self.vol = 0
 		self._vol_cb = vol_cb
 		self._avg_time = vol_avg_time

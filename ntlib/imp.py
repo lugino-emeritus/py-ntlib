@@ -1,10 +1,10 @@
-"""Handle module reloads and imports from specific paths."""
+"""Handle imports from specific paths or module reloads."""
 
 import importlib as _il
 import logging
 import sys
 
-__version__ = '0.1.3'
+__version__ = '0.1.4'
 
 try:
 	from ._imp_paths import alias_paths as _aliases
@@ -44,6 +44,6 @@ def import_alias(alias, modulename):
 
 
 def set_log_config(level=logging.INFO, fmt='', **kwargs):
-	"""Sets log config to 'level(asctime): {fmt} message'."""
+	"""Set log config to 'level(asctime): {fmt} message'."""
 	fmt = ' '.join(x for x in ('%(levelname).1s(%(asctime)s):', fmt, '%(message)s') if x)
 	logging.basicConfig(format=fmt, level=level, **kwargs)
