@@ -1,8 +1,8 @@
 import datetime
 
-from .connect import connect_to
+from .connect import *
 
-__version__ = '0.1.3'
+__version__ = '0.1.4'
 
 #-------------------------------------------------------
 
@@ -41,15 +41,6 @@ class MiniSheet:
 		self.sheet[idx].DataArray = ((val,),)
 
 
-_DAY0 = datetime.datetime(1899,12,30)
-
-def to_dtime(tday):
-	return _DAY0 + datetime.timedelta(days=tday)
-
-def from_dtime(tval):
-	tdiff = tval - _DAY0
-	return tdiff.days + tdiff.seconds / 86400
-
 def data_to_str(data):
 	if isinstance(data, str):
 		return data
@@ -58,3 +49,10 @@ def data_to_str(data):
 		if z == data:
 			data = z
 	return str(data)
+
+_DAY0 = datetime.datetime(1899,12,30)
+def to_dtime(tday):
+	return _DAY0 + datetime.timedelta(days=tday)
+def from_dtime(tval):
+	tdiff = tval - _DAY0
+	return tdiff.days + tdiff.seconds / 86400

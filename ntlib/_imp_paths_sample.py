@@ -4,6 +4,7 @@ This example configuration allows e.g. the following imports:
 - imp.import_alias('mypy', 'xyz') will import xyz from DEFAULT_PATH + 'python'
 - imp.import_alias('project_foo', 'bar') imports foo.bar from DEFAULT_PATH + 'Projects'
 """
+
 from sys import platform
 
 if platform.startswith('win'):

@@ -5,7 +5,7 @@ import uno
 
 from ntlib.fctthread import start_app
 
-__version__ = '0.1.3'
+__version__ = '0.1.4'
 
 if sys.platform.startswith('win'):
 	OFFICE_START_CMD = 'C:/Program Files/LibreOffice/program/soffice.exe'
@@ -14,7 +14,7 @@ else:
 
 #-------------------------------------------------------
 
-def _init_ctx(port=3103):
+def _init_ctx(port=2002):
 	lctx = uno.getComponentContext()  # local context
 	resolver = lctx.ServiceManager.createInstanceWithContext('com.sun.star.bridge.UnoUrlResolver', lctx)
 	resolve_param = f'uno:socket,host=localhost,port={port};urp;StarOffice.ComponentContext'
@@ -72,3 +72,19 @@ def connect_to(name=''):
 		if m_path and path == _norm_filepath(m_path):
 			return model
 	raise ConnectionError('not possible to connect to existing file')
+
+
+def get_model_attributes(model):
+	keys = {}
+	for x in model.__dir__():
+		try:
+			a = getattr(model, x)
+		except Exception:
+			continue
+		t = type(a)
+		v = keys.get(t)
+		if v:
+			v.add(x)
+		else:
+			keys[t] = {x}
+	return {k: sorted(v) for k, v in keys.items()}

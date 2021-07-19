@@ -8,7 +8,7 @@ import sounddevice as sd
 import soundfile as sf
 import threading
 
-__version__ = '0.1.9'
+__version__ = '0.2.0'
 
 _DTYPE = 'float32'  # float32 is highly recommended
 
@@ -26,15 +26,15 @@ def _alt_file(filename):
 	return filename if os.path.exists(filename) else os.path.join(os.path.dirname(__file__), filename)
 
 
-class PlaySound:
-	def __init__(self, filename, device=None, ch_out_num=None):
+class FilePlayer:
+	def __init__(self, filename, *, device=None, ch_num=None):
 		"""Class to handle audio playback on specific device and channels."""
 		self._filename = _alt_file(filename)
 		self._device = device
 		self._q = queue.Queue(maxsize=_BUFFERSIZE)
 		self._should_run = False
 		self._t = None
-		self._sound_played = threading.Event()
+		self._stopped = threading.Event()
 		self.stream = None
 
 		self._file = sf.SoundFile(self._filename)
@@ -44,8 +44,8 @@ class PlaySound:
 			self._blocksize = min(2 ** (1 + self._file.samplerate // _BLOCKTIMEFRAC).bit_length(), _MAX_BLOCKSIZE)
 			self._q_timeout = 0.1 +  _BUFFERSIZE * self._blocksize / self._samplerate
 			test_channels = [self._ch_in_num, None]
-			if ch_out_num not in test_channels:
-				test_channels.insert(0, ch_out_num)
+			if ch_num not in test_channels:
+				test_channels.insert(0, ch_num)
 			for ch in test_channels:
 				try:
 					self._init_stream(ch)
@@ -59,19 +59,19 @@ class PlaySound:
 			raise
 
 		self._ch_out_num = self.stream.channels
-		if ch_out_num and ch_out_num != self._ch_out_num:
-			logger.warning('%d channels not work, using %d channels', ch_out_num, self._ch_out_num)
+		if ch_num and ch_num != self._ch_out_num:
+			logger.warning('%d channels not work, using %d channels', ch_num, self._ch_out_num)
 		self._vol_array = np.eye(self._ch_in_num, self._ch_out_num, dtype=_DTYPE)
 		logger.debug('initialized: %s', self.info())
 
-	def _init_stream(self, ch_out_num):
+	def _init_stream(self, ch_num):
 		logger.debug('init stream')
 		if self.stream is not None:
 			self.close()
 		self.stream = sd.OutputStream(
 			samplerate=self._samplerate, blocksize=self._blocksize,
-			device=self._device, channels=ch_out_num, dtype=_DTYPE,
-			callback=self._callback, finished_callback=self._sound_played.set)
+			device=self._device, channels=ch_num, dtype=_DTYPE,
+			callback=self._callback, finished_callback=self._stopped.set)
 
 	def _reinit_file(self):
 		if self._file.closed:
@@ -97,7 +97,7 @@ class PlaySound:
 
 	def _callback(self, outdata, frames, time, status):
 		if status:
-			logger.error('status in callback: %r', status)
+			logger.error('FilePlayer callback status: %s', status)
 			raise sd.CallbackAbort
 		try:
 			data = self._q.get(timeout=0)
@@ -125,7 +125,7 @@ class PlaySound:
 
 	def _play(self):
 		self._should_run = True
-		self._sound_played.clear()
+		self._stopped.clear()
 		self.reinit()
 		try:
 			try:
@@ -143,7 +143,7 @@ class PlaySound:
 				self._q.put(data, timeout=self._q_timeout)
 			else:
 				self.stream.stop()
-			self._sound_played.wait(self._q_timeout)
+			self._stopped.wait(self._q_timeout)
 			self._should_run = False
 		except Exception as e:
 			if self._should_run or not isinstance(e, queue.Full):
@@ -154,9 +154,8 @@ class PlaySound:
 		return self._t.is_alive() if self._t else False
 
 	def join(self, timeout=None):
-		if self._t is None:
-			return
-		self._t.join(timeout)
+		if self._t:
+			self._t.join(timeout)
 
 	def play(self):
 		if self.is_alive():
@@ -209,58 +208,59 @@ class PlaySound:
 			'buffersize': _BUFFERSIZE, 'buffer_filled': self._q.qsize()}
 
 
-def create_vol_array(ch_in_out_num, mono=False, ch_out=None, vol=1):
+def create_vol_array(ch_in_out_num, mono=False, outputs=None, vol=1):
 	(ch_in_num, ch_out_num) = ch_in_out_num
 	vol_array = np.zeros((ch_in_num, ch_out_num), dtype=_DTYPE)
 	for i in range(ch_out_num):
-		if not ch_out or i in ch_out:
+		if not outputs or i in outputs:
 			vol_array[i % ch_in_num, i] = vol
 	if mono:
 		a = np.ones((ch_in_num, ch_in_num), dtype=_DTYPE) / ch_in_num
 		vol_array = np.matmul(a, vol_array)
-	logging.debug(f'vol_array:\n{vol_array}')
+	logging.debug('vol_array:\n%s', vol_array)
 	return vol_array
 
+
+def new_playback(filename, *, device=None, ch_num=None, outputs=None, mono=False, vol=1):
+	"""Return FilePlayer configured to use a given device and channels."""
+	fp = FilePlayer(filename, device=device, ch_num=ch_num)
+	vol_array = create_vol_array(fp.get_channel_num(), mono, outputs, vol)
+	fp.set_vol_array(vol_array)
+	fp.reinit()
+	return fp
+
 def config_ps(filename, device=None, ch_out_num=None, mono=False, ch_out=None, vol=1):
-	"""Return PlaySound configured to use a given device and channels."""
-	ps = PlaySound(filename, device, ch_out_num)
-	vol_array = create_vol_array(ps.get_channel_num(), mono, ch_out, vol)
-	ps.set_vol_array(vol_array)
-	ps.reinit()
-	return ps
+	logger.warning('config_ps deprecated, use new_playback')
+	return new_playback(filename, device=device, ch_num=ch_out_num, outputs=ch_out, mono=mono, vol=vol)
 
 #-------------------------------------------------------
 
 class InputVolume:
-	def __init__(self, vol_cb, vol_avg_time=0.5, device=None):
-		"""Call vol_cb(volume) after approx. vol_avg_time, an input device can be selected."""
+	def __init__(self, vol_cb, *, device=None, delay=0.5):
+		"""Call vol_cb(volume) approx. each delay seconds, an input device can be selected."""
 		self.vol = 0
 		self._vol_cb = vol_cb
-		self._avg_time = vol_avg_time
+		self._delay = delay
 		self._device = device
-		self._error_stop = False
 		self._init_stream()
 
 	def _init_stream(self):
 		logger.debug('init stream')
-		self.stream = sd.RawInputStream(device=self._device, channels=1,
-			callback=self._callback, finished_callback=self._finished_callback,
-			blocksize=2048, dtype=_DTYPE)
-		self._vol_fact = self.stream.blocksize / (self.stream.samplerate * self._avg_time)
-		if self._vol_fact >= 1:
+		self.stream = sd.InputStream(device=self._device, channels=1,
+			callback=self._callback, blocksize=2048, dtype=_DTYPE)
+		self._vol_scale = self.stream.blocksize / (self.stream.samplerate * self._delay)
+		if self._vol_scale > 0.5:
 			self.close()
-			raise ValueError(f'vol_avg_time is too short for given blocksize ({self.stream.blocksize}) '
-				f'and samplerate ({self.stream.samplerate})')
-		self._cb_repeat = int(0.75 / self._vol_fact - 1)
+			raise ValueError(f'delay is too short for used configuration')
+		self._cb_repeat = int(1 / self._vol_scale - 0.5)
 		self._cb_cnt = self._cb_repeat
 
 	def _callback(self, indata, frames, time, status):
 		if status:
-			logger.error('status in callback: %r', status)
+			logger.error('InputVolume callback status: %s', status)
 			raise sd.CallbackAbort
-		np_in = np.frombuffer(indata, dtype=_DTYPE)
-		vol = np.average(np.abs(np_in))
-		self.vol += (vol - self.vol) * self._vol_fact
+		vol = np.average(np.abs(indata))
+		self.vol += (vol - self.vol) * self._vol_scale
 		if self._cb_cnt > 0:
 			self._cb_cnt -= 1
 		else:
@@ -269,29 +269,21 @@ class InputVolume:
 				self._vol_cb(self.vol)
 			except Exception:
 				logger.exception('vol_cb raised an error, close stream')
-				self._error_stop = False
 				raise sd.CallbackAbort from None
-
-	def _finished_callback(self):
-		if self._error_stop:
-			logger.error('finished callback unexpected')
 
 	def start(self):
 		if self.stream is None:
 			self._init_stream()
 		elif self.stream.active:
 			return
-		self._error_stop = True
 		self.stream.start()
 
 	def stop(self):
 		if self.stream is not None:
-			self._error_stop = False
 			self.stream.stop()
 
 	def close(self):
 		if self.stream is not None:
-			self._error_stop = False
 			self.stream.close()
 			self.stream = None
 

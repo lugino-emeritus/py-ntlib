@@ -38,14 +38,13 @@ Moreover the function `set_log_config(level=logging.INFO)` is available to set a
 
 Allows system commands (`shell_cmd`, `start_app`), and provides different classes to work with threads:
 - `ThreadLoop`: execute a method repeatedly
-- `CmpEvent`: receive data from another thread after a successful comparison
 - `QueueWorker`: parallel element processing
+- `CmpEvent`: receive data from another thread after a successful comparison
 
 
 ## tsocket
 
-Wrapper over the python socket to use a timeout by default and simplify initialization of udp and ipv6 sockets. \
-*Note:* `create_serversock` changed in version 0.2.11: Pass address `('', port)` as parameter to be compatible.
+Wrapper over the python socket to use a timeout by default and simplify initialization of udp and ipv6 sockets.
 
 
 ## easysound
@@ -54,12 +53,13 @@ Using sounddevice and soundfile modules to playback sounds on a specific device 
 
 ```py
 import ntlib.easysound as esound
-ps = esound.config_ps('sound1.wav', device=None, ch_out_num=2, mono=True, ch_out=(1,), vol=0.5)
-# ch_out = (1,) means playback only on right channel
-ps.play()
-# ps.stop()
-ps.join()
-ps.close()
+fp = esound.new_playback('sound1.wav', device=None, ch_num=2, outputs=(1,), mono=True, vol=0.5)
+# outputs = (1,) means playback only on right channel
+# outpust = (1, 0) swaps right and left channel
+fp.play()
+# fp.stop()
+fp.join()
+fp.close()
 ```
 
 It is also possible to start it from console: `python3 easysound --help` for more information.
@@ -72,12 +72,12 @@ import ntlib.easysound as esound
 def vol_cb(vol):
 	print(vol)
 
-vol_handler = esound.InputVolume(vol_cb, vol_avg_time=0.5, device=None)
+invol = esound.InputVolume(vol_cb, device=None, delay=0.5)
 # calls vol_cb approx. each 0.5 seconds
-vol_handler.start()
+invol.start()
 time.sleep(5)
-vol_handler.stop()
-vol_handler.close()
+invol.stop()
+invol.close()
 ```
 
 

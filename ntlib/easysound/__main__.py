@@ -1,8 +1,9 @@
 from __init__ import *
 
 import argparse
+import ntlib.imp
 
-logging.basicConfig(format='%(levelname)-8s %(asctime)s; %(message)s', level=logging.DEBUG)
+ntlib.imp.set_log_config(logging.DEBUG)
 
 def int_or_str(s):
 	try:
@@ -16,20 +17,21 @@ parser = argparse.ArgumentParser()
 parser.add_argument('filename', help='audio file to be played back')
 parser.add_argument('-d', '--device', type=int_or_str,
 	help='output device (numeric ID or substring)')
-parser.add_argument('-n', '--num_out_ch', type=int, help='number of output channels')
-parser.add_argument('-o', '--out_ch', type=int_set,
+parser.add_argument('-n', '--ch_num', type=int, help='number of output channels')
+parser.add_argument('-o', '--outputs', type=int_set,
 	help='channels on which the sound should be played, \
 	e.g. -o 1,0 to play right channel on left speaker and the other way round')
 parser.add_argument('-v', '--volume', type=int, help='volume in percent', default=100)
 parser.add_argument('--mono', action='store_true')
 args = parser.parse_args()
 
-ps = config_ps(args.filename, args.device, args.num_out_ch, args.mono, args.out_ch, args.volume / 100)
-ps.play()
+pb = new_playback(args.filename, device=args.device, ch_num=args.ch_num,
+	outputs=args.outputs, mono=args.mono, vol=args.volume/100)
+pb.play()
 try:
-	while ps.is_alive():
-		ps.join(1)
+	while pb.is_alive():
+		pb.join(1)
 except KeyboardInterrupt:
-	ps.stop()
+	pb.stop()
 	logging.info('stopped by user')
-ps.close()
+pb.close()

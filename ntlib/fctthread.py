@@ -7,7 +7,7 @@ import subprocess as _subp
 import sys
 import threading
 
-__version__ = '0.2.9'
+__version__ = '0.2.10'
 
 logger = logging.getLogger(__name__)
 
@@ -92,18 +92,20 @@ class ThreadLoop:
 		with self._lock:
 			self._start_flag = True
 			if self._stop_flag:
-				self.join()
+				self._t.join()
 			if not self.is_alive():
 				self._stop_flag = False
 				self._t = threading.Thread(target=self._handle, daemon=True)
 				self._t.start()
 
 	def stop(self, timeout=None):
+		if not self._t:
+			return True
 		with self._lock:
 			self._start_flag = False
 			self._should_run = False
-		self.join(timeout)
-		return not self.is_alive()
+		self._t.join(timeout)
+		return not self._t.is_alive()
 
 	def join(self, timeout=None):
 		if self._t:
@@ -118,7 +120,7 @@ class QueueWorker:
 
 	If a thread is not called within timeout seconds it will be stopped.
 	"""
-	def __init__(self, target, maxthreads=2, *, timeout=30):
+	def __init__(self, target, maxthreads=2, *, timeout=10):
 		if maxthreads <= 0:
 			raise ValueError('number of threads must be at least 1')
 		if timeout < 0:
@@ -154,7 +156,7 @@ class QueueWorker:
 						return
 
 	def _start_thread(self):
-		# make sure self._lock is locked while starting a new thread
+		# self._lock must be locked
 		if self._active_loops < self._maxthreads:
 			threading.Thread(target=self._handle, daemon=True).start()
 			self._active_loops += 1
@@ -193,7 +195,7 @@ class QueueWorker:
 			self._all_done.wait_for(lambda: self._active_loops<=0, timeout)
 
 	def is_alive(self):
-		return self._enabled
+		return self._enabled or self._active_loops > 0
 
 	def info(self):
 		return {'enabled': self._enabled, 'loops': self._active_loops,
