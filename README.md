@@ -25,13 +25,16 @@ More details can be found in the source code. Feel free to modify it for your ow
 
 ## imp
 
-Developed to handle path imports:
+Provides the following methods:
 
-- `reload(module)`: reloads a module, useful for testing
-- `module = import_path(modulename, path='')`: import from specific folder, returns module
-- `module = import_alias(alias, modulename)`: it is possible to set an alias name for a folder, rename `_imp_paths_sample.py` to `_imp_paths.py` and define an `alias_path` in this file to use it.
+- `config_log(level=INFO)`: set a basic config for logging
+- `options = load_config(name)`: import `_confpath.py` which defines a path to a json dictionary (*config.json*) containing `options` for ntlib module `name`
 
-Moreover the function `set_log_config(level=logging.INFO)` is available to set a basic config for logging.
+- `import_module`, `reload`: known from `importlib`
+- `module = import_path(modulename, path='')`: import from specific folder
+- `module = import_alias(alias, modulename)`: load module from an alias path (section `imp` in config.json)
+
+*Note: version >0.2 does not support `_imp_paths.py` any more*
 
 
 ## fctthread
