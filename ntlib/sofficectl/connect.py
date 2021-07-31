@@ -3,25 +3,23 @@ import sys
 import time
 import uno
 
+import ntlib.imp as ntimp
 from ntlib.fctthread import start_app
 
-__version__ = '0.1.4'
+__version__ = '0.1.5'
 
-if sys.platform.startswith('win'):
-	OFFICE_START_CMD = 'C:/Program Files/LibreOffice/program/soffice.exe'
-else:
-	OFFICE_START_CMD = 'libreoffice'
+_START_CMD, _PORT = ntimp.load_config('sofficectl')
 
 #-------------------------------------------------------
 
-def _init_ctx(port=2002):
+def _init_ctx():
 	lctx = uno.getComponentContext()  # local context
 	resolver = lctx.ServiceManager.createInstanceWithContext('com.sun.star.bridge.UnoUrlResolver', lctx)
-	resolve_param = f'uno:socket,host=localhost,port={port};urp;StarOffice.ComponentContext'
+	resolve_param = f'uno:socket,host=localhost,port={_PORT};urp;StarOffice.ComponentContext'
 	try:
 		ctx = resolver.resolve(resolve_param)
 	except Exception:
-		start_app((OFFICE_START_CMD, f'--accept=socket,host=localhost,port={port};urp;StarOffice.ServiceManager'))
+		start_app((_START_CMD, f'--accept=socket,host=localhost,port={_PORT};urp;StarOffice.ServiceManager'))
 		for _ in range(10):
 			time.sleep(1)
 			try:
@@ -64,7 +62,7 @@ def connect_to(name=''):
 		return model
 	if not os.path.isfile(path):
 		raise ValueError(f'file {path} does not exist')
-	start_app((OFFICE_START_CMD, path))
+	start_app((_START_CMD, path))
 	for _ in range(10):
 		time.sleep(1)
 		model = ctx.getCurrentComponent()

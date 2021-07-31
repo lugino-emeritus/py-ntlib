@@ -218,6 +218,7 @@ def create_serversock(addr, *, udp=False, reuseaddr=None):
 	return sock
 
 def create_connection(address, timeout=_TIMEOUT_MAX, source_address=None):
+	"""Connect to a TCP address and return the socket."""
 	sock = socket.create_connection(address, timeout, source_address)
 	return Socket(sock, timeout=_TIMEOUT_MID)
 
