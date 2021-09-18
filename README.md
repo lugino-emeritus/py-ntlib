@@ -34,8 +34,6 @@ Provides the following methods:
 - `module = import_path(modulename, path='')`: import from specific folder
 - `module = import_alias(alias, modulename)`: load module from an alias path (section `imp` in config.json)
 
-*Note: version >0.2 does not support `_imp_paths.py` any more*
-
 
 ## fctthread
 
