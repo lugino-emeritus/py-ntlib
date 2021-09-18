@@ -3,24 +3,18 @@
 import sys
 from importlib import import_module, reload
 
-__version__ = '0.2.1'
+__version__ = '0.2.3'
 
 _confpath = None
 _aliases = None
 
 #-------------------------------------------------------
 
-def config_log(level=20, fmt='', **kwargs):
+def config_log(level='INFO', fmt='', **kwargs):
 	"""Configurate logging format to 'Level(asctime): [fmt] message'."""
-	import logging  # level 20 is logging.INFO
+	import logging
 	fmt = ' '.join(x for x in ('%(levelname).1s(%(asctime)s):', fmt, '%(message)s') if x)
 	logging.basicConfig(format=fmt, level=level, **kwargs)
-
-def set_log_config(*args, **kwargs):
-	print('WARNING: set_log_config deprecated, use config_log')
-	config_log(*args, **kwargs)
-	import logging
-	logging.warning('set_log_config deprecated, use config_log')
 
 
 def init_confpath(p=None):

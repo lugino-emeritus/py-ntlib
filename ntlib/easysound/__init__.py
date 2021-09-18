@@ -8,7 +8,7 @@ import sounddevice as sd
 import soundfile as sf
 import threading
 
-__version__ = '0.2.0'
+__version__ = '0.2.1'
 
 _DTYPE = 'float32'  # float32 is highly recommended
 
@@ -228,10 +228,6 @@ def new_playback(filename, *, device=None, ch_num=None, outputs=None, mono=False
 	fp.set_vol_array(vol_array)
 	fp.reinit()
 	return fp
-
-def config_ps(filename, device=None, ch_out_num=None, mono=False, ch_out=None, vol=1):
-	logger.warning('config_ps deprecated, use new_playback')
-	return new_playback(filename, device=device, ch_num=ch_out_num, outputs=ch_out, mono=mono, vol=vol)
 
 #-------------------------------------------------------
 

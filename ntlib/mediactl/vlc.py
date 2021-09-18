@@ -14,7 +14,7 @@ import ntlib.imp as ntimp
 import ntlib.tsocket as tsocket
 from ntlib.fctthread import start_app as _start_app
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +31,41 @@ class VideoLan():
 		self.sock = tsocket.Socket(timeout=_TIMEOUT_MIN)
 		self.sock.maxtimeout = 0.1
 		self.sock.connect(addr)
+
+	if sys.platform.startswith('win'):
+		def _clear_buffer(self):
+			self.sock.clear_buffer(_TIMEOUT_MIN, esc_data=b'\n')
+	else:
+		def _clear_buffer(self):
+			self.sock.clear_buffer(_TIMEOUT_MIN)
+
+	def recv_lines(self, max_lines=10):
+		lines = []
+		try:
+			for _ in range(max_lines):
+				r = self.sock.recv_until(8192)
+				if not r:
+					break
+				lines.append(r.decode())
+		except tsocket.Timeout:
+			pass
+		return lines
+
+	def cmd(self, cmd):
+		self._clear_buffer()
+		self.sock.send(cmd.encode() + b'\n')
+		return self.recv_lines()
+
+	def online_check(self):
+		if self.sock is None:
+			return False
+		try:
+			if self.cmd('status'):
+				return True
+		except OSError as e:
+			logger.debug('OS Error in vlc online_check: %r', e)
+		self.sock = None
+		return False
 
 	def start(self):
 		if self.online_check():
@@ -70,41 +105,6 @@ class VideoLan():
 		finally:
 			self.sock = None
 
-	if sys.platform.startswith('win'):
-		def _clear_buffer(self):
-			self.sock.clear_buffer(_TIMEOUT_MIN, esc_data=b'\n')
-	else:
-		def _clear_buffer(self):
-			self.sock.clear_buffer(_TIMEOUT_MIN)
-
-	def recv_lines(self, max_lines=10):
-		lines = []
-		try:
-			for _ in range(max_lines):
-				r = self.sock.recv_until(8192)
-				if not r:
-					break
-				lines.append(r.decode())
-		except tsocket.Timeout:
-			pass
-		return lines
-
-	def cmd(self, cmd):
-		self._clear_buffer()
-		self.sock.send(cmd.encode() + b'\n')
-		return self.recv_lines()
-
-	def online_check(self):
-		if self.sock is None:
-			return False
-		try:
-			if self.cmd('status'):
-				return True
-		except OSError as e:
-			logger.debug('OS Error in vlc online_check: %r', e)
-		self.sock = None
-		return False
-
 	def jump(self, dt):
 		t = int(self.cmd('get_time')[0])
 		return self.cmd('seek {}'.format(t + dt))
@@ -126,11 +126,15 @@ def cmd(cmd, param=None):
 				cmd = 'volume 256'
 		elif cmd == 'mute':
 			cmd = 'volume 0'
-		elif cmd == 'jump' and param:
+		elif cmd.startswith('jump'):
 			try:
-				con.jump(int(param))
-			except ValueError:
-				pass
+				if param and cmd == 'jump':
+					param = int(param)
+				else:
+					param = {'jumpf': 10, 'jumpb': -10}[cmd]
+			except (ValueError, KeyError):
+				raise ValueError(f'cmd {cmd} with param {param} not possible')
+			con.jump(param)
 		elif cmd == 'start':
 			con.start()
 			return
