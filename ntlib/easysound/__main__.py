@@ -3,7 +3,7 @@ from __init__ import *
 import argparse
 import ntlib.imp
 
-ntlib.imp.set_log_config(logging.DEBUG)
+ntlib.imp.config_log(logging.DEBUG)
 
 def int_or_str(s):
 	try:

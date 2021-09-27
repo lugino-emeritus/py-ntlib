@@ -3,7 +3,7 @@
 import sys
 from importlib import import_module, reload
 
-__version__ = '0.2.3'
+__version__ = '0.2.4'
 
 _confpath = None
 _aliases = None
@@ -18,12 +18,13 @@ def config_log(level='INFO', fmt='', **kwargs):
 
 
 def init_confpath(p=None):
-	global _confpath, _jload
+	global _confpath, _confread
 	if _confpath is None:
-		from json import load as _jload
+		from json import load as _confread
 		if p is None:
-			from ._confpath import confpath as p
-		_confpath = p
+			from ._confpath import confpath as _confpath
+		else:
+			_confpath = p
 	else:
 		raise RuntimeError(f'confpath ({_confpath}) already defined')
 
@@ -31,7 +32,7 @@ def load_config(name):
 	if _confpath is None:
 		init_confpath()
 	with open(_confpath) as f:
-		return _jload(f)[name]
+		return _confread(f)[name]
 
 
 def import_path(modulename, path=''):
