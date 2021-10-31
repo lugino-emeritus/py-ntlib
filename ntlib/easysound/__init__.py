@@ -8,7 +8,7 @@ import sounddevice as sd
 import soundfile as sf
 import threading
 
-__version__ = '0.2.1'
+__version__ = '0.2.2'
 
 _DTYPE = 'float32'  # float32 is highly recommended
 
@@ -29,15 +29,14 @@ def _alt_file(filename):
 class FilePlayer:
 	def __init__(self, filename, *, device=None, ch_num=None):
 		"""Class to handle audio playback on specific device and channels."""
-		self._filename = _alt_file(filename)
+		self.stream = None
 		self._device = device
 		self._q = queue.Queue(maxsize=_BUFFERSIZE)
 		self._should_run = False
 		self._t = None
 		self._stopped = threading.Event()
-		self.stream = None
 
-		self._file = sf.SoundFile(self._filename)
+		self._file = sf.SoundFile(_alt_file(filename))
 		self._samplerate = self._file.samplerate
 		try:
 			self._ch_in_num = self._file.channels
@@ -64,25 +63,18 @@ class FilePlayer:
 		self._vol_array = np.eye(self._ch_in_num, self._ch_out_num, dtype=_DTYPE)
 		logger.debug('initialized: %s', self.info())
 
+
 	def _init_stream(self, ch_num):
 		logger.debug('init stream')
 		if self.stream is not None:
-			self.close()
+			logger.warning('init stream already defined')
+			self._should_run = False
+			self.stream.close()
+			self.join(self._q_timeout)
 		self.stream = sd.OutputStream(
 			samplerate=self._samplerate, blocksize=self._blocksize,
 			device=self._device, channels=ch_num, dtype=_DTYPE,
 			callback=self._callback, finished_callback=self._stopped.set)
-
-	def _reinit_file(self):
-		if self._file.closed:
-			logger.debug('reinit file')
-			self._file = sf.SoundFile(self._filename)
-		elif not self._q.empty():
-			if self._file.tell() == self._q.qsize() * self._blocksize:
-				return
-		logger.debug('soundfile seek to 0')
-		self._file.seek(0)
-		self._fill_buffer(force=True)
 
 	def _fill_buffer(self, force=False):
 		logger.debug('filling buffer')
@@ -94,6 +86,27 @@ class FilePlayer:
 			self._q.put(data, timeout=0)
 			if data is None:
 				break
+
+	def _seek_file(self):
+		if not self._q.empty():
+			if self._file.tell() == self._q.qsize() * self._blocksize:
+				return
+		logger.debug('soundfile seek to 0')
+		self._file.seek(0)
+		self._fill_buffer(force=True)
+
+	def reinit(self, force=False):
+		if self.stream is None:
+			raise RuntimeError('FilePlayer closed')
+		if force:
+			logger.debug('force reinit')
+			self._init_stream(self._ch_out_num)
+		elif self.stream.active:
+			return
+		self._seek_file()
+		if not self.stream.stopped:
+			self.stream.stop()
+
 
 	def _callback(self, outdata, frames, time, status):
 		if status:
@@ -109,19 +122,6 @@ class FilePlayer:
 			outdata[:] = 0
 			raise sd.CallbackStop
 		outdata[:] = data
-
-	def reinit(self, force=False):
-		if force:
-			logger.debug('force reinit')
-			self.close()
-			self.join(self._q_timeout)
-		elif self.stream and self.stream.active:
-			return
-		self._reinit_file()
-		if not self.stream:
-			self._init_stream(self._ch_out_num)
-		elif not self.stream.stopped:
-			self.stream.stop()
 
 	def _play(self):
 		self._should_run = True
@@ -150,6 +150,7 @@ class FilePlayer:
 				logger.exception('exception occured in _play: %r', e)
 				self.close()
 
+
 	def is_alive(self):
 		return self._t.is_alive() if self._t else False
 
@@ -158,11 +159,11 @@ class FilePlayer:
 			self._t.join(timeout)
 
 	def play(self):
-		if self.is_alive():
+		if self.is_alive() or self.stream is None:
 			return False
 		self._t = threading.Thread(target=self._play, daemon=True)
 		self._t.start()
-		return self.is_alive()
+		return self._t.is_alive()
 
 	def stop(self, timeout=None):
 		if not self.is_alive():
@@ -202,7 +203,7 @@ class FilePlayer:
 			return None
 
 	def info(self):
-		return {'file_init': not self._file.closed, 'stream_init': bool(self.stream), 'is_alive': self.is_alive(),
+		return {'initialized': bool(self.stream) and not self._file.closed, 'is_alive': self.is_alive(),
 			'ch_in_num': self._ch_in_num, 'ch_out_num': self._ch_out_num,
 			'samplerate': self._samplerate, 'blocksize': self._blocksize,
 			'buffersize': _BUFFERSIZE, 'buffer_filled': self._q.qsize()}
@@ -287,6 +288,6 @@ class InputVolume:
 		return self.stream.active if self.stream else False
 
 	def info(self):
-		return {'stream_init': bool(self.stream), 'is_alive': self.is_alive(),
+		return {'initialized': bool(self.stream), 'is_alive': self.is_alive(),
 			'samplerate': self.stream.samplerate if self.stream else None,
 			'blocksize': self.stream.blocksize if self.stream else None}
