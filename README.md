@@ -81,6 +81,8 @@ invol.stop()
 invol.close()
 ```
 
+*Note v0.2.3*: sounds are now in subfolder `sounds`
+
 
 ## sofficectl
 

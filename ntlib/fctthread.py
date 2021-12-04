@@ -3,34 +3,41 @@
 import logging
 import os
 import queue
-import subprocess as _subp
+import subprocess
 import sys
 import threading
 
-__version__ = '0.2.10'
+__version__ = '0.2.12'
 
 logger = logging.getLogger(__name__)
 
 #-------------------------------------------------------
 
 def _popen_ext(cmd, shell=False):
-	_subp.Popen(cmd, shell=shell, start_new_session=True,
-		stdin=_subp.DEVNULL, stdout=_subp.DEVNULL, stderr=_subp.DEVNULL)
+	subprocess.Popen(cmd, shell=shell, start_new_session=True,
+		stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-if sys.platform.startswith('win'):
-	def _start_file(cmd):
-		os.startfile(cmd)
-elif sys.platform.startswith('linux'):
+_ENCODING = 'utf-8'
+
+if sys.platform.startswith('linux'):
 	def _start_file(cmd):
 		_popen_ext(['xdg-open', cmd])
+
+elif sys.platform.startswith('win'):
+	_ENCODING = 'cp850'
+	def _start_file(cmd):
+		os.startfile(cmd)
+
 else:
-	raise ImportError(f'platform {sys.platform} not supported')
+	logger.warning('fctthread not fully supported on %s', sys.platform)
+	def _start_file(cmd):
+		raise NotImplementedError(f'_start_file not implemented on {sys.platform}')
 
 
 def shell_cmd(cmd):
 	"""Process a shell command within python."""
-	return _subp.run(cmd, shell=True, stdin=_subp.DEVNULL,
-		stdout=_subp.PIPE, stderr=_subp.STDOUT).stdout.decode(errors='replace')
+	return subprocess.run(cmd, shell=True, encoding=_ENCODING, errors='replace',
+		stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
 
 def start_app(cmd):
 	"""Start application or open file."""
@@ -43,7 +50,7 @@ def start_app(cmd):
 			_popen_ext(cmd, shell=True)
 		return True
 	except Exception:
-		logger.exception('not possible to start app, command: %s', cmd)
+		logger.exception('not possible to start app, cmd: %s', cmd)
 		return False
 
 def start_daemon(target, args=(), kwargs=None):
@@ -78,7 +85,7 @@ class ThreadLoop:
 					if self._target():
 						break
 			except Exception:
-				logger.exception('ThreadLoop callback error')
+				logger.exception('ThreadLoop error calling target')
 			with self._lock:
 				if self._start_flag:
 					self._start_flag = False
@@ -135,6 +142,7 @@ class QueueWorker:
 		self._lock = threading.Lock()
 		self._all_done = threading.Condition(self._lock)
 
+
 	def _handle(self):
 		while True:
 			try:
@@ -143,7 +151,7 @@ class QueueWorker:
 					try:
 						self._target(x)
 					except Exception:
-						logger.exception('QueueWorker callback error')
+						logger.exception('QueueWorker error calling target')
 					finally:
 						self._q.task_done()
 			except queue.Empty:
@@ -161,23 +169,14 @@ class QueueWorker:
 			threading.Thread(target=self._handle, daemon=True).start()
 			self._active_loops += 1
 
-	def _check(self):
-		# make sure self._lock is locked
-		# will be removed in the future
-		if self._active_loops < 0 or self._active_loops > self._maxthreads or \
-				self._active_loops + self._q.qsize() < self._q.unfinished_tasks:
-			logger.critical('QueueWorker bad number of loops: %s', self.info())
-
 	def put(self, x, timeout=None):
 		self._q.put(x, timeout=timeout)
 		with self._lock:
-			self._check()
 			if self._active_loops < self._q.unfinished_tasks:
 				self._start_thread()
 
 	def start(self):
 		with self._lock:
-			self._check()
 			if self._enabled:
 				return
 			self._enabled = True

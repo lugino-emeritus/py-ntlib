@@ -3,8 +3,6 @@ from __init__ import *
 import argparse
 import ntlib.imp
 
-ntlib.imp.config_log(logging.DEBUG)
-
 def int_or_str(s):
 	try:
 		return int(s)

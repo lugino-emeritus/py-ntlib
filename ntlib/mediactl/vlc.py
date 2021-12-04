@@ -4,6 +4,7 @@ Available commands are:
 play, pause, next, prev, stop
 volup, voldown, volreset, mute
 start, exit
+jumpf, jumpb: jump 10 seconds forward or back
 jump t seconds, t can be negative
 """
 import logging

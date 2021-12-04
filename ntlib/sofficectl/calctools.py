@@ -2,25 +2,25 @@ import datetime
 
 from .connect import *
 
-__version__ = '0.1.4'
+__version__ = '0.1.5'
 
 #-------------------------------------------------------
 
 def get_msheet_dic(model):
 	return {s.Name: MiniSheet(s) for s in model.Sheets}
 
-def get_sheet_cell(sheet, cell_id):
+def _get_sheet_cell(sheet, cell_id):
 	return sheet.getCellRangeByName(cell_id) if isinstance(cell_id, str) else \
 		sheet.getCellByPosition(cell_id[1], cell_id[0])
 
 def get_celldata(sheet, cell_id):
-	return get_sheet_cell(sheet, cell_id).DataArray[0][0]
+	return _get_sheet_cell(sheet, cell_id).DataArray[0][0]
 def set_celldata(sheet, cell_id, val):
-	get_sheet_cell(sheet, cell_id).DataArray = ((val,),)
+	_get_sheet_cell(sheet, cell_id).DataArray = ((val,),)
 
-def get_arraydata(sheet, cell_id, end_id):
-	return sheet.getCellRangeByName(cell_id + ':' + end_id).DataArray if isinstance(cell_id, str) else \
-		sheet.getCellRangeByPosition(cell_id[1], cell_id[0], end_id[1], end_id[0]).DataArray
+def get_arraydata(sheet, start_cell, end_cell):
+	return sheet.getCellRangeByName(start_cell + ':' + end_cell).DataArray if isinstance(start_cell, str) else \
+		sheet.getCellRangeByPosition(start_cell[1], start_cell[0], end_cell[1], end_cell[0]).DataArray
 
 
 class MiniSheet:
@@ -32,8 +32,8 @@ class MiniSheet:
 	def set_data(self, cell_id, val):
 		set_celldata(self.sheet, cell_id, val)
 
-	def get_array(self, cell_id, end_id):
-		return get_arraydata(self.sheet, cell_id, end_id)
+	def get_array(self, start_cell, end_cell):
+		return get_arraydata(self.sheet, start_cell, end_cell)
 
 	def __getitem__(self, idx):
 		return self.sheet[idx].DataArray[0][0]

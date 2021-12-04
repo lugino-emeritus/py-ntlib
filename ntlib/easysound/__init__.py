@@ -8,7 +8,7 @@ import sounddevice as sd
 import soundfile as sf
 import threading
 
-__version__ = '0.2.2'
+__version__ = '0.2.3'
 
 _DTYPE = 'float32'  # float32 is highly recommended
 
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 #-------------------------------------------------------
 
 def _alt_file(filename):
-	return filename if os.path.exists(filename) else os.path.join(os.path.dirname(__file__), filename)
+	return filename if os.path.exists(filename) else os.path.join(os.path.dirname(__file__), 'sounds', filename)
 
 
 class FilePlayer:
