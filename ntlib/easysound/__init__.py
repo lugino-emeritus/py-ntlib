@@ -83,7 +83,7 @@ class FilePlayer:
 				self._q.queue.clear()
 		for _ in range(_BUFFERFILL - self._q.qsize()):
 			data = self._get_modified_sound_data()
-			self._q.put(data, timeout=0)
+			self._q.put(data, timeout=0.0)
 			if data is None:
 				break
 
@@ -113,7 +113,7 @@ class FilePlayer:
 			logger.error('FilePlayer callback status: %s', status)
 			raise sd.CallbackAbort
 		try:
-			data = self._q.get(timeout=0)
+			data = self._q.get(timeout=0.0)
 		except queue.Empty:
 			logger.warning('Buffer is empty: increase buffersize?')
 			outdata[:] = 0
@@ -209,7 +209,7 @@ class FilePlayer:
 			'buffersize': _BUFFERSIZE, 'buffer_filled': self._q.qsize()}
 
 
-def create_vol_array(ch_in_out_num, mono=False, outputs=None, vol=1):
+def create_vol_array(ch_in_out_num, mono=False, outputs=None, vol=1.0):
 	(ch_in_num, ch_out_num) = ch_in_out_num
 	vol_array = np.zeros((ch_in_num, ch_out_num), dtype=_DTYPE)
 	for i in range(ch_out_num):
@@ -222,7 +222,7 @@ def create_vol_array(ch_in_out_num, mono=False, outputs=None, vol=1):
 	return vol_array
 
 
-def new_playback(filename, *, device=None, ch_num=None, outputs=None, mono=False, vol=1):
+def new_playback(filename, *, device=None, ch_num=None, outputs=None, mono=False, vol=1.0):
 	"""Return FilePlayer configured to use a given device and channels."""
 	fp = FilePlayer(filename, device=device, ch_num=ch_num)
 	vol_array = create_vol_array(fp.get_channel_num(), mono, outputs, vol)
@@ -235,7 +235,7 @@ def new_playback(filename, *, device=None, ch_num=None, outputs=None, mono=False
 class InputVolume:
 	def __init__(self, vol_cb, *, device=None, delay=0.5):
 		"""Call vol_cb(volume) approx. each delay seconds, an input device can be selected."""
-		self.vol = 0
+		self.vol = 0.0
 		self._vol_cb = vol_cb
 		self._delay = delay
 		self._device = device

@@ -19,16 +19,16 @@ parser.add_argument('-n', '--ch_num', type=int, help='number of output channels'
 parser.add_argument('-o', '--outputs', type=int_set,
 	help='channels on which the sound should be played, \
 	e.g. -o 1,0 to play right channel on left speaker and the other way round')
-parser.add_argument('-v', '--volume', type=int, help='volume in percent', default=100)
+parser.add_argument('-v', '--volume', type=float, help='volume in percent', default=100.0)
 parser.add_argument('--mono', action='store_true')
 args = parser.parse_args()
 
 pb = new_playback(args.filename, device=args.device, ch_num=args.ch_num,
-	outputs=args.outputs, mono=args.mono, vol=args.volume/100)
+	outputs=args.outputs, mono=args.mono, vol=args.volume/100.0)
 pb.play()
 try:
 	while pb.is_alive():
-		pb.join(1)
+		pb.join(1.0)
 except KeyboardInterrupt:
 	pb.stop()
 	logging.info('stopped by user')

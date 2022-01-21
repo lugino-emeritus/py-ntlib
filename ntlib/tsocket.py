@@ -7,10 +7,10 @@ import time
 
 from socket import (timeout as Timeout, gaierror as GAIError)
 
-__version__ = '0.2.14'
+__version__ = '0.2.15'
 
-_TIMEOUT_MAX = 30  # used for udp or while waiting for a message
-_TIMEOUT_MID = 2  # timeout for connected tcp socket
+_TIMEOUT_MAX = 30.0  # used for udp or while waiting for a message
+_TIMEOUT_MID = 2.0  # timeout for connected tcp socket
 
 HAS_IPV6 = socket.has_ipv6
 
@@ -31,23 +31,21 @@ class _EnsureTimeout:
 
 
 class Socket(socket.socket):
-	def __init__(self, sock=None, *, ipv6=None, udp=False, timeout=None):
+	def __init__(self, sock=None, *, ipv6=False, udp=False, timeout=None):
 		"""Create a (tcp) socket with timeout.
 
 		If sock is already a socket a tsocket.Socket will be generated. The origin socket will be closed.
 		If sock is an address tuple it will bind to that and set the ip version.
 		"""
 		if sock:
-			if isinstance(sock, socket.socket):
-				super().__init__(sock.family, sock.type, sock.proto, fileno=sock.detach())
-				self.settimeout(timeout or sock.gettimeout())
-			else:
-				raise TypeError('sock must be a socket or None')
+			if not isinstance(sock, socket.socket):
+				raise TypeError('sock must be socket.socket or None')
+			super().__init__(sock.family, sock.type, sock.proto, fileno=sock.detach())
+			self.settimeout(timeout or sock.gettimeout())
 		else:
 			super().__init__(socket.AF_INET6 if ipv6 else socket.AF_INET,
 				socket.SOCK_DGRAM if udp else socket.SOCK_STREAM)
 			self.settimeout(timeout or _TIMEOUT_MAX)
-
 		self._ensure_timeout = _EnsureTimeout(self)
 		self.maxtimeout = _TIMEOUT_MAX
 
@@ -131,7 +129,7 @@ class Socket(socket.socket):
 			data.extend(c)
 		raise ValueError(f'end character not found within {len(data)} bytes')
 
-	def clear_buffer(self, timeout=1, *, esc_data=None):
+	def clear_buffer(self, timeout=1.0, *, esc_data=None):
 		"""Clear input buffer of socket.
 
 		Returns True if a timeout occurs,
@@ -203,13 +201,13 @@ def find_free_addr(*args, udp=False):
 
 
 def create_serversock(addr, *, udp=False, reuseaddr=None):
+	"""Create a socket binded to addr."""
 	if addr[0]:
-		ipv6, addr = is_ipv6_addr(addr)
+		sock = Socket(ipv6=is_ipv6_addr(addr)[0], udp=udp)
 	else:
-		ipv6 = HAS_IPV6
-	sock = Socket(ipv6=ipv6, udp=udp)
-	if HAS_IPV6 and not addr[0]:
-		setsockopt_ipv6only(sock, False)
+		sock = Socket(ipv6=HAS_IPV6, udp=udp)
+		if HAS_IPV6:
+			setsockopt_ipv6only(sock, False)
 	if reuseaddr is not None:
 		setsockopt_reuseaddr(sock, reuseaddr)
 	if sys.platform.startswith('win'):

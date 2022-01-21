@@ -21,7 +21,7 @@ def _init_ctx():
 	except Exception:
 		start_app((_START_CMD, f'--accept=socket,host=localhost,port={_PORT};urp;StarOffice.ServiceManager'))
 		for _ in range(10):
-			time.sleep(1)
+			time.sleep(1.0)
 			try:
 				ctx = resolver.resolve(resolve_param)
 				break
@@ -64,7 +64,7 @@ def connect_to(name=''):
 		raise ValueError(f'file {path} does not exist')
 	start_app((_START_CMD, path))
 	for _ in range(10):
-		time.sleep(1)
+		time.sleep(1.0)
 		model = ctx.getCurrentComponent()
 		m_path = getattr(model, 'Location', None)
 		if m_path and path == _norm_filepath(m_path):

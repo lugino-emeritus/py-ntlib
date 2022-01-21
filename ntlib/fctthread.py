@@ -7,7 +7,7 @@ import subprocess
 import sys
 import threading
 
-__version__ = '0.2.12'
+__version__ = '0.2.13'
 
 logger = logging.getLogger(__name__)
 
@@ -127,10 +127,10 @@ class QueueWorker:
 
 	If a thread is not called within timeout seconds it will be stopped.
 	"""
-	def __init__(self, target, maxthreads=2, *, timeout=10):
+	def __init__(self, target, maxthreads=2, *, timeout=10.0):
 		if maxthreads <= 0:
 			raise ValueError('number of threads must be at least 1')
-		if timeout < 0:
+		if timeout < 0.0:
 			raise ValueError('timeout must be a nonnegative number')
 		self._target = target
 		self._maxthreads = maxthreads
@@ -201,15 +201,22 @@ class QueueWorker:
 			'unfinished': self._q.unfinished_tasks, 'waiting': self._q.qsize()}
 
 
+def _eq(x, y):
+	return x == y
+
 class CmpEvent:
 	"""Class to receive data from another thread after a successful comparison.
 
 	This data is accessible with CmpEvent.result.
 	An optional answer can be sent to the compare thread.
 	"""
-	def __init__(self):
+	def __init__(self, cmpfct=_eq):
+		"""Init method accepts an alternative boolean compare function:
+		cmpfct(init_value, compare_value), equality check (==) by default.
+		"""
 		self._cond = threading.Condition(threading.Lock())
 		self.result = None
+		self._cmpfct = cmpfct
 		self._cmpval = None
 		self._answer = None
 		self._waiting = False
@@ -229,7 +236,7 @@ class CmpEvent:
 	def compare(self, cmpval, result):
 		if self._waiting:
 			with self._cond:
-				if cmpval == self._cmpval:
+				if self._cmpfct(self._cmpval, cmpval):
 					self.result = result
 					self._waiting = False
 					self._cond.notify_all()

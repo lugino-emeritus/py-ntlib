@@ -54,5 +54,4 @@ _DAY0 = datetime.datetime(1899,12,30)
 def to_dtime(tday):
 	return _DAY0 + datetime.timedelta(days=tday)
 def from_dtime(tval):
-	tdiff = tval - _DAY0
-	return tdiff.days + tdiff.seconds / 86400
+	return (tval-_DAY0).total_seconds / 86400.0
