@@ -21,7 +21,7 @@ _ENCODING = 'utf-8'
 
 if sys.platform.startswith('linux'):
 	def _start_file(cmd):
-		_popen_ext(['xdg-open', cmd])
+		_popen_ext(('xdg-open', cmd))
 
 elif sys.platform.startswith('win'):
 	_ENCODING = 'cp850'
@@ -214,12 +214,12 @@ class CmpEvent:
 		"""Init method accepts an alternative boolean compare function:
 		cmpfct(init_value, compare_value), equality check (==) by default.
 		"""
-		self._cond = threading.Condition(threading.Lock())
-		self.result = None
 		self._cmpfct = cmpfct
+		self.result = None
 		self._cmpval = None
 		self._answer = None
 		self._waiting = False
+		self._cond = threading.Condition(threading.Lock())
 
 	def init(self, cmpval, answer=True):
 		with self._cond:

@@ -2,7 +2,7 @@ import datetime
 
 from .connect import *
 
-__version__ = '0.1.5'
+__version__ = '0.1.6'
 
 #-------------------------------------------------------
 
@@ -54,4 +54,4 @@ _DAY0 = datetime.datetime(1899,12,30)
 def to_dtime(tday):
 	return _DAY0 + datetime.timedelta(days=tday)
 def from_dtime(tval):
-	return (tval-_DAY0).total_seconds / 86400.0
+	return (tval-_DAY0).total_seconds() / 86400.0

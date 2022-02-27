@@ -6,8 +6,8 @@ volup, voldown, volreset, mute
 start, exit
 """
 import sys
-import ntlib.imp as ntimp
-from ntlib.fctthread import start_app as _start_app
+from .. import imp as ntimp
+from ..fctthread import start_app as _start_app
 
 __version__ = '0.1.0'
 

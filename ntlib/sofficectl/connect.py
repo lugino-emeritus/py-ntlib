@@ -3,8 +3,8 @@ import sys
 import time
 import uno
 
-import ntlib.imp as ntimp
-from ntlib.fctthread import start_app
+from .. import imp as ntimp
+from ..fctthread import start_app
 
 __version__ = '0.1.5'
 
@@ -40,9 +40,8 @@ def _find_doc(ctx, title, path):
 	res = []
 	for m in ctx.Components:
 		m_path = getattr(m, 'Location', None)
-		if m_path:
-			if path == _norm_filepath(m_path):
-				return m
+		if m_path and path == _norm_filepath(m_path):
+			return m
 		m_title = getattr(m, 'Title', None)
 		if m_title and title in m_title:
 			res.append(m)
@@ -57,8 +56,7 @@ def _find_doc(ctx, title, path):
 def connect_to(name=''):
 	ctx = _init_ctx()
 	path = os.path.abspath(name)
-	model = _find_doc(ctx, name, path)
-	if model:
+	if model := _find_doc(ctx, name, path):
 		return model
 	if not os.path.isfile(path):
 		raise ValueError(f'file {path} does not exist')
@@ -80,8 +78,7 @@ def get_model_attributes(model):
 		except Exception:
 			continue
 		t = type(a)
-		v = keys.get(t)
-		if v:
+		if v := keys.get(t):
 			v.add(x)
 		else:
 			keys[t] = {x}

@@ -4,13 +4,12 @@ import select
 import socket
 import sys
 import time
-
 from socket import (timeout as Timeout, gaierror as GAIError)
 
-__version__ = '0.2.15'
+__version__ = '0.2.16'
 
-_TIMEOUT_MAX = 30.0  # used for udp or while waiting for a message
-_TIMEOUT_MID = 2.0  # timeout for connected tcp socket
+_TIMEOUT_MAX = 30.0  # used for udp or waiting for messages
+_TIMEOUT_TCP = 2.0  # timeout for connected tcp socket
 
 HAS_IPV6 = socket.has_ipv6
 
@@ -59,7 +58,7 @@ class Socket(socket.socket):
 		"""Return (tsocket.Socket, addr)."""
 		(sock, addr) = super().accept()
 		return self.__class__(sock, timeout=self.timeout), addr
-	def taccept(self, timeout=_TIMEOUT_MID):
+	def taccept(self, timeout=_TIMEOUT_TCP):
 		"""Same as accept, but sets a different timeout."""
 		(sock, addr) = super().accept()
 		return self.__class__(sock, timeout=timeout), addr
@@ -103,19 +102,17 @@ class Socket(socket.socket):
 	def recv_exactly(self, size):
 		t_max = time.monotonic() + self.maxtimeout
 		lst = []
-		while True:
-			data = self.recv(size)
-			if not data:
-				return b''
-			size -= len(data)
+		while data := self.recv(size):
 			lst.append(data)
+			size -= len(data)
 			if not size:
 				return b''.join(lst)
 			if t_max < time.monotonic():
 				raise Timeout('maxtimeout')
+		return b''
 
 	def recv_until(self, maxlen=2**16, end_char=b'\n'):
-		"""Receive all bytes until end_char, not useable with udp."""
+		"""Receive all bytes until end_char, not usable with udp."""
 		t_max = time.monotonic() + self.maxtimeout
 		data = bytearray()
 		for _ in range(maxlen):
@@ -218,7 +215,7 @@ def create_serversock(addr, *, udp=False, reuseaddr=None):
 def create_connection(address, timeout=_TIMEOUT_MAX, source_address=None):
 	"""Connect to a TCP address and return the socket."""
 	sock = socket.create_connection(address, timeout, source_address)
-	return Socket(sock, timeout=_TIMEOUT_MID)
+	return Socket(sock, timeout=_TIMEOUT_TCP)
 
 
 def setsockopt_ipv6only(sock, v6only):

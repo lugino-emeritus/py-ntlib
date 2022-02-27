@@ -10,10 +10,9 @@ jump t seconds, t can be negative
 import logging
 import sys
 import time
-
-import ntlib.imp as ntimp
-import ntlib.tsocket as tsocket
-from ntlib.fctthread import start_app as _start_app
+from .. import imp as ntimp
+from .. import tsocket
+from ..fctthread import start_app as _start_app
 
 __version__ = '0.1.1'
 
