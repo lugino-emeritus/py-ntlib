@@ -7,7 +7,7 @@ start, exit
 """
 import sys
 from .. import imp as ntimp
-from ..fctthread import start_app as _start_app
+from ..fctthread import start_app
 
 __version__ = '0.1.0'
 
@@ -37,8 +37,8 @@ def cmd(cmd, *, root=_ROOT):
 		elif cmd == 'mute':
 			cmd = '/command:Mute'
 		elif cmd == 'start':
-			_start_app(root)
+			start_app(root)
 			return
 		else:
 			raise ValueError(f'cmd {cmd} unknown')
-	_start_app(root + (cmd,))
+	start_app(root + (cmd,))

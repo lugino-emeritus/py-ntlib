@@ -12,7 +12,7 @@ import sys
 import time
 from .. import imp as ntimp
 from .. import tsocket
-from ..fctthread import start_app as _start_app
+from ..fctthread import start_app
 
 __version__ = '0.1.1'
 
@@ -79,7 +79,7 @@ class VideoLan():
 			self.sock.close()
 
 		addr = tsocket.find_free_addr(('127.0.0.1', _PREF_PORT), 0)
-		_start_app((_START_CMD, '--extraintf', 'rc', '--rc-host', f'{addr[0]}:{addr[1]}'))
+		start_app((_START_CMD, '--extraintf', 'rc', '--rc-host', f'{addr[0]}:{addr[1]}'))
 		logger.log(logging.INFO if addr[1]==_PREF_PORT else logging.WARNING, 'vlc using addr %s', addr)
 
 		err = None

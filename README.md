@@ -70,7 +70,7 @@ Using sounddevice and soundfile modules to playback sounds on a specific device 
 import ntlib.easysound as esound
 fp = esound.new_playback('beeps.wav', device=None, channels=2, outputs=(1,), mono=True, vol=0.5)
 # outputs = (1,): playback only on right channel
-# outpust = (1, 0): swap right and left channel
+# outputs = (1, 0): swap right and left channel
 fp.play()
 # fp.stop()
 fp.join()
