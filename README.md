@@ -1,8 +1,8 @@
 # NTLIB
 
-Collection of python (3.6+) modules developed for various projects.
+Collection of python (3.8+) modules developed for various projects.
 
-It can be used by adding a \*.pth file to a python package path (e.g. site-packages) containing the path to a folder which includes the library. This has the advantage of using the same modules on different systems of a dual-boot computer. Furthermore, this allows the development of libraries without naming issues.
+It can be used by adding a \*.pth file in a `sys.path` directory (e.g. site-packages), containing the link to this namespace package. Thus, the advantage is that the same modules can be used on different systems of a dual-boot computer. Furthermore, this allows the development of libraries without naming issues.
 
 ```
 FOLDER STRUCTURE:
@@ -10,29 +10,32 @@ FOLDER STRUCTURE:
   + ntlib
     - imp.py
     - ...
-  + otherlib
+  + extern
   	- imp.py
   	- ...
 ```
 
 ```py
 import ntlib.imp as ntimp
-import otherlib.imp as other
+import extern.imp as extimp
 ```
 
-More details can be found in the source code. Feel free to modify it for your own purposes.
+Below is a list with a brief description of the available modules.
+Feel free to modify the source code for your own purposes.
 
 
 ## imp
 
 Provides the following methods:
 
-- `config_log(level=INFO)`: set a basic config for logging
+- `config_log(level='INFO')`: set a basic config for logging, it is possible to set an additional format
 - `options = load_config(name)`: import `_confpath.py` which defines a path to a json dictionary (*config.json*) containing `options` for ntlib module `name`
 
-- `import_module`, `reload`: known from `importlib`
+- `reload(module)`: reload module, extends function from `importlib`
 - `module = import_path(modulename, path='')`: import from specific folder
 - `module = import_alias(alias, modulename)`: load module from an alias path (section `imp` in config.json)
+
+In order for the following modules to operate correctly copy the `config_sample` folder to `config` and customize it or edit `_confpath.py`.
 
 
 ## fctthread
@@ -43,9 +46,20 @@ Allows system commands (`shell_cmd`, `start_app`), and provides different classe
 - `CmpEvent`: receive data from another thread after a successful comparison
 
 
+## scheduler
+
+Module to call methods repeatedly. Also provides a global `RptSched` (`scheduler.glob_sched`) to add e.g. purge jobs.
+
+
 ## tsocket
 
 Wrapper over the python socket to use a timeout by default and simplify initialization of udp and ipv6 sockets.
+
+
+## mediactl
+
+Modules to control [vlc](https://www.videolan.org) and [foobar2000](https://www.foobar2000.org) from python.
+The paths to the applications are defined in the config.
 
 
 ## easysound
@@ -54,9 +68,9 @@ Using sounddevice and soundfile modules to playback sounds on a specific device 
 
 ```py
 import ntlib.easysound as esound
-fp = esound.new_playback('sound1.wav', device=None, ch_num=2, outputs=(1,), mono=True, vol=0.5)
-# outputs = (1,) means playback only on right channel
-# outpust = (1, 0) swaps right and left channel
+fp = esound.new_playback('beeps.wav', device=None, channels=2, outputs=(1,), mono=True, vol=0.5)
+# outputs = (1,): playback only on right channel
+# outpust = (1, 0): swap right and left channel
 fp.play()
 # fp.stop()
 fp.join()
@@ -81,12 +95,10 @@ invol.stop()
 invol.close()
 ```
 
-*Note v0.2.3*: sounds are now in subfolder `sounds`
-
-
 ## sofficectl
 
-Helps connecting python with an OpenOffice or LibreOffice file using `uno`. Especially for Libreoffice calc useful. It uses tcp port 3103 by default.
+Helps connecting python with an open LibreOffice or OpenOffice file using `uno`. Especially useful for calc.
+The config contains the connection parameters.
 
 ```py
 import ntlib.sofficectl.calctools as calctools
@@ -101,4 +113,4 @@ print(sheet[2,0])  # prints 'Hello World'
 print(sheet.get_array('A1', 'B3'))
 ```
 
-`to_dtime` and `from_dtime` converts LibreOffice time values to `datetime` in python.
+`to_dtime` and `from_dtime` converts office time values to `datetime`.
