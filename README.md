@@ -2,8 +2,8 @@
 
 Collection of python (3.8+) modules developed for various projects.
 
-To make it available in `sys.path` the script `ntlib/add-path.py` can be called from the interpreter. It updates file mylibs.pth in site-packages with a link to this namespace package.
-Thus, it is possible that the same modules can be used on different systems of a dual-boot computer. Furthermore, this allows the development of libraries without naming issues:
+To make it available in `sys.path` the script `ntlib/_add_path.py` can be called from the interpreter. It updates or creates file mylibs.pth in site-packages with a link to this namespace package.
+Thus, it is possible that the same installation can be used on different systems of a dual-boot computer. Furthermore, this allows the development of libraries without naming issues:
 
 ```
 FOLDER STRUCTURE:
@@ -65,7 +65,7 @@ The paths to the applications are defined in the config.
 
 ## easysound
 
-Using sounddevice and soundfile modules to playback sounds on a specific device and channels:
+Using modules sounddevice and soundfile playback audio files on a specific device and channels:
 
 ```py
 import ntlib.easysound as esound
