@@ -7,7 +7,7 @@ import subprocess
 import sys
 import threading
 
-__version__ = '0.2.13'
+__version__ = '0.2.15'
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ else:
 
 
 def shell_cmd(cmd):
-	"""Process a shell command within python."""
+	"""Return stdout of a shell command."""
 	return subprocess.run(cmd, shell=True, encoding=_ENCODING, errors='replace',
 		stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
 
@@ -59,10 +59,6 @@ def start_daemon(target, args=(), kwargs=None):
 	t.start()
 	return t
 
-def start_internal_thread(target, args=(), kwargs=None):
-	logger.warning('start_internal_thread deprecated, use start_daemon')
-	return start_daemon(target, args, kwargs)
-
 #-------------------------------------------------------
 
 class ThreadLoop:
@@ -71,14 +67,15 @@ class ThreadLoop:
 	Loops over target() until calling stop or the target returns True.
 	"""
 	def __init__(self, target):
-		self._t = None
 		self._target = target
-		self._lock = threading.Lock()
 		self._start_flag = False
 		self._should_run = False
 		self._stop_flag = False
+		self._t = None
+		self._lock = threading.Lock()
 
 	def _handle(self):
+		logger.debug('ThreadLoop start handle of %s', self._target)
 		while True:
 			try:
 				while self._should_run and not self._start_flag:
@@ -92,18 +89,23 @@ class ThreadLoop:
 					self._should_run = True
 				else:
 					self._should_run = False
+					# stop flag is used for the rare case when this handle stops
+					# but the thread is still alive and start is called
 					self._stop_flag = True
+					logger.debug('ThreadLoop stop handle of %s', self._target)
 					return
 
 	def start(self):
 		with self._lock:
 			self._start_flag = True
-			if self._stop_flag:
-				self._t.join()
-			if not self.is_alive():
-				self._stop_flag = False
-				self._t = threading.Thread(target=self._handle, daemon=True)
-				self._t.start()
+			if self._t:
+				if self._stop_flag:
+					self._t.join()
+				elif self._t.is_alive():
+					return
+			self._stop_flag = False
+			self._t = threading.Thread(target=self._handle, daemon=True)
+			self._t.start()
 
 	def stop(self, timeout=None):
 		if not self._t:
@@ -131,10 +133,10 @@ class QueueWorker:
 		if maxthreads <= 0:
 			raise ValueError('number of threads must be at least 1')
 		if timeout < 0.0:
-			raise ValueError('timeout must be a nonnegative number')
+			raise ValueError('timeout must be nonnegative')
 		self._target = target
 		self._maxthreads = maxthreads
-		self._timeout = timeout
+		self.timeout = timeout
 
 		self._enabled = False
 		self._active_loops = 0
@@ -142,16 +144,15 @@ class QueueWorker:
 		self._lock = threading.Lock()
 		self._all_done = threading.Condition(self._lock)
 
-
 	def _handle(self):
 		while True:
 			try:
 				while self._enabled:
-					x = self._q.get(timeout=self._timeout)
+					arg = self._q.get(timeout=self.timeout)
 					try:
-						self._target(x)
+						self._target(arg)
 					except Exception:
-						logger.exception('QueueWorker error calling target')
+						logger.exception('QueueWorker error calling target with %s', arg)
 					finally:
 						self._q.task_done()
 			except queue.Empty:
@@ -169,8 +170,8 @@ class QueueWorker:
 			threading.Thread(target=self._handle, daemon=True).start()
 			self._active_loops += 1
 
-	def put(self, x, timeout=None):
-		self._q.put(x, timeout=timeout)
+	def put(self, arg, timeout=None):
+		self._q.put(arg, timeout=timeout)
 		with self._lock:
 			if self._active_loops < self._q.unfinished_tasks:
 				self._start_thread()
@@ -201,16 +202,13 @@ class QueueWorker:
 			'unfinished': self._q.unfinished_tasks, 'waiting': self._q.qsize()}
 
 
-def _eq(x, y):
-	return x == y
-
 class CmpEvent:
 	"""Class to receive data from another thread after a successful comparison.
 
 	This data is accessible with CmpEvent.result.
 	An optional answer can be sent to the compare thread.
 	"""
-	def __init__(self, cmpfct=_eq):
+	def __init__(self, cmpfct=lambda x,y: x==y):
 		"""Init method accepts an alternative boolean compare function:
 		cmpfct(init_value, compare_value), equality check (==) by default.
 		"""

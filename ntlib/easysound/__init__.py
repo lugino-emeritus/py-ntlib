@@ -282,7 +282,7 @@ class InputVolume:
 #-------------------------------------------------------
 
 def list_devices():
-	return tuple(d.strip() for d in str(sd.query_devices()).split('\n'))
+	return [d.strip() for d in str(sd.query_devices()).split('\n')]
 
 def create_vol_array(channel_shape, mono=False, outputs=None, vol=1.0):
 	ch_in_num, ch_out_num = channel_shape

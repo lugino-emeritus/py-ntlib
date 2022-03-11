@@ -4,18 +4,27 @@ import importlib as _il
 import os.path as _osp
 import sys
 
-__version__ = '0.2.8'
+__version__ = '0.2.9'
 
 _confpath = None
 _aliases = None
 
 #-------------------------------------------------------
 
-def config_log(level='INFO', fmt='', *, force=True, **kwargs):
-	"""Configurate logging format to 'Level(asctime): [fmt] message'."""
+def config_log(level='INFO', fmt='', *, force=True, handler=None):
+	"""Configurate logging format to 'Level(time): [fmt] message'.
+
+	- level is known from logging, can be int or levelname
+	- fmt is an additional %-formatter
+	- force sets the root logger even if it already has a handler (default: True)
+	- handler is an alternative logging handler
+
+	If more options are needed, use dictConfig or fileConfig from logging.config.
+	"""
 	import logging
 	fmt = ' '.join(x for x in ('%(levelname).1s[%(asctime)s]', fmt, '%(message)s') if x)
-	logging.basicConfig(format=fmt, level=level, force=force, **kwargs)
+	logging.basicConfig(format=fmt, level=level, force=force,
+		handlers=(handler,) if handler else None)
 
 
 def init_confpath(p=None, *, force=False):
@@ -47,11 +56,12 @@ class _EnsureSysPath:
 
 
 def import_path(modulename, path='.'):
+	"""Import module from a given path, defaults to CWD."""
 	with _EnsureSysPath(path):
 		return _il.import_module(modulename)
 
 def import_alias(alias, modulename):
-	"""import module from an alias path defined in the config.json file."""
+	"""Import module from an alias path defined in the config.json file."""
 	global _aliases
 	if _aliases is None:
 		_aliases = load_config('imp')

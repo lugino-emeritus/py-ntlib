@@ -2,7 +2,8 @@
 
 Collection of python (3.8+) modules developed for various projects.
 
-It can be used by adding a \*.pth file in a `sys.path` directory (e.g. site-packages), containing the link to this namespace package. Thus, the advantage is that the same modules can be used on different systems of a dual-boot computer. Furthermore, this allows the development of libraries without naming issues.
+To make it available in `sys.path` the script `ntlib/add-path.py` can be called from the interpreter. It updates file mylibs.pth in site-packages with a link to this namespace package.
+Thus, it is possible that the same modules can be used on different systems of a dual-boot computer. Furthermore, this allows the development of libraries without naming issues:
 
 ```
 FOLDER STRUCTURE:

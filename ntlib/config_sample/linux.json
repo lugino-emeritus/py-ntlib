@@ -1,6 +1,6 @@
 {
 	"imp": {
-		"mypy": ["/media/user/Data/Projects/python", ""],
+		"projects": ["/media/user/Data/Projects/python", ""],
 		"mylib": ["/media/user/Data/lib", "mylib"]
 	},
 	"sofficectl": ["libreoffice", 2002],
