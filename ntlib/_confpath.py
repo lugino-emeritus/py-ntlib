@@ -1,4 +1,4 @@
-"""Basic path for configuration file for ntlib modules."""
+"""Basic path for ntlib module configuration."""
 
 import os
 from sys import platform
