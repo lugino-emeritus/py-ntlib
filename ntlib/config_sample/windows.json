@@ -1,6 +1,6 @@
 {
 	"imp": {
-		"mypy": ["D:/Projects/python", ""],
+		"projects": ["D:/Projects/python", ""],
 		"mylib": ["D:/lib", "mylib"]
 	},
 	"sofficectl": ["C:/Program Files/LibreOffice/program/soffice.exe", 2002],
