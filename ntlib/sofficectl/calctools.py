@@ -2,7 +2,7 @@ import datetime
 
 from .connect import *
 
-__version__ = '0.1.6'
+__version__ = '0.1.7'
 
 #-------------------------------------------------------
 
@@ -12,11 +12,6 @@ def get_msheet_dic(model):
 def _get_sheet_cell(sheet, cell_id):
 	return sheet.getCellRangeByName(cell_id) if isinstance(cell_id, str) else \
 		sheet.getCellByPosition(cell_id[1], cell_id[0])
-
-def get_celldata(sheet, cell_id):
-	return _get_sheet_cell(sheet, cell_id).DataArray[0][0]
-def set_celldata(sheet, cell_id, val):
-	_get_sheet_cell(sheet, cell_id).DataArray = ((val,),)
 
 def get_arraydata(sheet, start_cell, end_cell):
 	return sheet.getCellRangeByName(start_cell + ':' + end_cell).DataArray if isinstance(start_cell, str) else \
@@ -28,9 +23,14 @@ class MiniSheet:
 		self.sheet = sheet
 
 	def get_data(self, cell_id):
-		return get_celldata(self.sheet, cell_id)
+		return _get_sheet_cell(self.sheet, cell_id).DataArray[0][0]
 	def set_data(self, cell_id, val):
-		set_celldata(self.sheet, cell_id, val)
+		_get_sheet_cell(self.sheet, cell_id).DataArray = ((val,),)
+
+	def get_formula(self, cell_id):
+		return _get_sheet_cell(self.sheet, cell_id).Formula
+	def set_formula(self, cell_id, f):
+		_get_sheet_cell(self.sheet, cell_id).Formula = f
 
 	def get_array(self, start_cell, end_cell):
 		return get_arraydata(self.sheet, start_cell, end_cell)

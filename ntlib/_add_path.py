@@ -1,10 +1,10 @@
-"""Add ntlib dir to mylibs.pth in site-packages."""
+"""Add ntlib directory to mylibs.pth in site-packages."""
+
+if __name__ != '__main__':
+	raise ImportError('this file must be executed directly')
 
 import os
 import sys
-
-if __name__ != '__main__':
-	raise SystemExit('this script must be executed directly')
 
 try:
 	import ntlib
@@ -12,37 +12,38 @@ try:
 except ImportError:
 	pass
 
-path = os.path.dirname(os.path.abspath(__file__))
-path, tail = os.path.split(path)
+pth = os.path.dirname(os.path.abspath(__file__))
+pth, tail = os.path.split(pth)
 if tail != 'ntlib':
 	raise SystemExit('ntlib not found')
-print('ntlib dir:', path)
+print('ntlib location:', pth)
 
-if path in sys.path:
-	raise SystemExit('library path already in sys.path')
+if pth in sys.path:
+	raise SystemExit('location available in sys.path')
+
+def update_pth(filename):
+	newline = False
+	if os.path.exists(filename):
+		with open(filename, 'r') as f:
+			s = f.read()
+		if s:
+			if s[-1] != '\n':
+				newline = True
+			for i in s.split('\n'):
+				if i and os.path.abspath(i) == pth:
+					raise SystemExit(f'location already in {filename}')
+	with open(filename, 'a') as f:
+		if newline:
+			f.write('\n')
+		f.write(pth + '\n')
+	raise SystemExit(f'successfully added location to {filename}')
 
 for p in sys.path:
 	if os.path.basename(p) == 'site-packages':
 		filename = os.path.join(p, 'mylibs.pth')
-		newline = False
 		try:
-			with open(filename, 'r') as f:
-				s = f.read()
-			if s:
-				if s[-1] != '\n':
-					newline = True
-				for i in s.split('\n'):
-					if i and os.path.abspath(i) == path:
-						raise SystemExit(f'library path already in {filename}')
-		except FileNotFoundError:
-			pass
-		try:
-			with open(filename, 'a') as f:
-				if newline:
-					f.write('\n')
-				f.write(path + '\n')
-			raise SystemExit(f'successfully added library path to {filename}')
+			update_pth(filename)
 		except PermissionError:
-			pass
+			print(f'no permission to add location to {filename}')
 
-raise SystemExit('failed to add ntlib to sys.path, calling script as root may help')
+raise SystemExit('failed to add ntlib to sys.path, calling script as admin may help')
