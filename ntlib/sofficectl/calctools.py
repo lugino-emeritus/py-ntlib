@@ -2,7 +2,7 @@ import datetime
 
 from .connect import *
 
-__version__ = '0.1.7'
+__version__ = '0.1.8'
 
 #-------------------------------------------------------
 
@@ -13,7 +13,7 @@ def _get_sheet_cell(sheet, cell_id):
 	return sheet.getCellRangeByName(cell_id) if isinstance(cell_id, str) else \
 		sheet.getCellByPosition(cell_id[1], cell_id[0])
 
-def get_arraydata(sheet, start_cell, end_cell):
+def get_data_array(sheet, start_cell, end_cell):
 	return sheet.getCellRangeByName(start_cell + ':' + end_cell).DataArray if isinstance(start_cell, str) else \
 		sheet.getCellRangeByPosition(start_cell[1], start_cell[0], end_cell[1], end_cell[0]).DataArray
 
@@ -33,7 +33,7 @@ class MiniSheet:
 		_get_sheet_cell(self.sheet, cell_id).Formula = f
 
 	def get_array(self, start_cell, end_cell):
-		return get_arraydata(self.sheet, start_cell, end_cell)
+		return get_data_array(self.sheet, start_cell, end_cell)
 
 	def __getitem__(self, idx):
 		return self.sheet[idx].DataArray[0][0]
