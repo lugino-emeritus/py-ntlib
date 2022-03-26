@@ -6,4 +6,5 @@ cp ntlib/README.md README.md
 git add .
 git status
 git commit -m "$1"
-sudo unmount ntlib/
+git push
+sudo umount ntlib/
