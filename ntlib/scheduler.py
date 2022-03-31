@@ -103,6 +103,7 @@ class RptSched:
 			self.jobs.clear()
 			self._job_update.notify()
 
+#-------------------------------------------------------
 
 glob_sched = None
 
