@@ -7,7 +7,7 @@ import subprocess
 import sys
 import threading
 
-__version__ = '0.2.15'
+__version__ = '0.2.16'
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +81,7 @@ class ThreadLoop:
 				while self._should_run and not self._start_flag:
 					if self._target():
 						break
-			except Exception:
+			except:
 				logger.exception('ThreadLoop error calling target')
 			with self._lock:
 				if self._start_flag:
@@ -151,7 +151,7 @@ class QueueWorker:
 					arg = self._q.get(timeout=self.timeout)
 					try:
 						self._target(arg)
-					except Exception:
+					except:
 						logger.exception('QueueWorker error calling target with %s', arg)
 					finally:
 						self._q.task_done()

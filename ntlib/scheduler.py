@@ -5,7 +5,7 @@ import time
 from heapq import heappop, heappush
 from .fctthread import ThreadLoop
 
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +62,7 @@ class RptSched:
 			dt = self._target(key, opt)
 			if dt is not None and dt < 0.0:
 				raise ValueError(f'call returned negative dt: {dt}')
-		except Exception:
+		except:
 			logger.exception('RptSched error calling target with key: %s, opt: %s', key, opt)
 			dt = None
 		with self._lock:

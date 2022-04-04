@@ -8,7 +8,7 @@ import sounddevice as sd
 import soundfile as sf
 import threading
 
-__version__ = '0.2.7'
+__version__ = '0.2.8'
 
 _DTYPE = 'float32'  # float32 is highly recommended
 _BLOCKTIMEFRAC = 20  # 48000 / 20 = 2400 -> results in blocksize = 4096
@@ -247,7 +247,7 @@ class InputVolume:
 			self._cb_cnt = self._cb_repeat
 			try:
 				self._vol_cb(self.vol)
-			except Exception:
+			except:
 				logger.exception('vol_cb raised error, stop stream')
 				raise sd.CallbackStop from None
 
