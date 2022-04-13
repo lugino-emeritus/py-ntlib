@@ -6,6 +6,6 @@
 	"sofficectl": ["C:/Program Files/LibreOffice/program/soffice.exe", 2002],
 	"mediactl": {
 		"vlc": ["C:/Program Files/VideoLAN/VLC/vlc.exe", 2645],
-		"foobar": "D:/PortableExe/foobar2000/foobar2000.exe"
+		"foobar": "D:/apps/foobar2000/foobar2000.exe"
 	}
 }
