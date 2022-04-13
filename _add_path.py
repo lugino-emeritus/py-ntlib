@@ -38,12 +38,13 @@ def update_pth(filename):
 		f.write(pth + '\n')
 	raise SystemExit(f'successfully added location to {filename}')
 
-for p in sys.path:
-	if os.path.basename(p) == 'site-packages':
-		filename = os.path.join(p, 'mylibs.pth')
-		try:
-			update_pth(filename)
-		except PermissionError:
-			print(f'no permission to add location to {filename}')
+package_paths = [p for p in sys.path if os.path.basename(p) == 'site-packages']
+package_paths.extend(p for p in sys.path if os.path.basename(p) == 'dist-packages')
+for p in package_paths:
+	filename = os.path.join(p, 'mylibs.pth')
+	try:
+		update_pth(filename)
+	except PermissionError:
+		print(f'no permission to add location to {filename}')
 
-raise SystemExit('failed to add ntlib to sys.path, calling script as admin may help')
+raise SystemExit('failed to add ntlib to sys.path')
