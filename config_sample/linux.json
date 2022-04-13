@@ -6,6 +6,6 @@
 	"sofficectl": ["libreoffice", 2002],
 	"mediactl": {
 		"vlc": ["vlc", 2645],
-		"foobar": "/media/user/Data/PortableExe/foobar2000/foobar2000.exe"
+		"foobar": "/media/user/Data/apps/foobar2000/foobar2000.exe"
 	}
 }
