@@ -14,12 +14,11 @@ from .. import imp as ntimp
 from .. import tsocket
 from ..fctthread import start_app
 
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 
 logger = logging.getLogger(__name__)
 
 _START_CMD, _PREF_PORT = ntimp.load_config('mediactl')['vlc']
-_TIMEOUT_MIN = 0.01
 
 #-------------------------------------------------------
 
@@ -28,32 +27,41 @@ class VideoLan():
 		self.sock = None
 
 	def _init_sock(self, addr):
-		self.sock = tsocket.Socket(timeout=_TIMEOUT_MIN)
-		self.sock.maxtimeout = 0.1
-		self.sock.connect(addr)
+		self.sock = tsocket.create_connection(addr, timeout=0.1)
+		#self.sock.settimeout(0.01)
+
+	def _close_sock(self):
+		if self.sock:
+			self.sock.close()
+		self.sock = None
 
 	if sys.platform.startswith('win'):
 		def _clear_buffer(self):
-			self.sock.clear_buffer(_TIMEOUT_MIN, esc_data=b'\n')
+			self.sock.clear_buffer(0.01, esc_data=b'\n')
 	else:
 		def _clear_buffer(self):
-			self.sock.clear_buffer(_TIMEOUT_MIN)
+			self.sock.clear_buffer(0.01)
 
 	def recv_lines(self, max_lines=10):
-		lines = []
-		try:
-			for _ in range(max_lines):
-				r = self.sock.recv_until(8192)
-				if not r:
-					break
-				lines.append(r.decode())
-		except tsocket.Timeout:
-			pass
-		return lines
+		with self.sock.ensure_timeout():
+			self.sock.settimeout(0.01)
+			lines = []
+			try:
+				for _ in range(max_lines):
+					r = self.sock.recv_until(8192)
+					if not r:
+						break
+					lines.append(r.decode())
+			except tsocket.Timeout:
+				pass
+			return lines
+
+	def _cmd(self, cmd):
+		self.sock.send(cmd.encode() + b'\n')
 
 	def cmd(self, cmd):
 		self._clear_buffer()
-		self.sock.send(cmd.encode() + b'\n')
+		self._cmd(cmd)
 		return self.recv_lines()
 
 	def online_check(self):
@@ -64,7 +72,7 @@ class VideoLan():
 				return True
 		except OSError as e:
 			logger.debug('OS Error in vlc online_check: %r', e)
-		self.sock = None
+		self._close_sock()
 		return False
 
 	def start(self):
@@ -76,7 +84,7 @@ class VideoLan():
 				logger.info('connected to already started vlc on %s', self.sock.getpeername())
 				return
 		except (tsocket.Timeout, OSError):
-			self.sock.close()
+			self._close_sock()
 
 		addr = tsocket.find_free_addr(('127.0.0.1', _PREF_PORT), 0)
 		start_app((_START_CMD, '--extraintf', 'rc', '--rc-host', f'{addr[0]}:{addr[1]}'))
@@ -89,10 +97,9 @@ class VideoLan():
 				self._init_sock(addr)
 				return
 			except (tsocket.Timeout, OSError) as e:
+				self._close_sock()
 				err = e
-		self.sock = None
-		if err:
-			raise ConnectionError(f'connection to vlc failed: {err!r}')
+		raise ConnectionError(f'connection to vlc failed: {err!r}')
 
 	def exit(self):
 		if self.sock is None:
@@ -103,44 +110,43 @@ class VideoLan():
 		except OSError as e:
 			logger.info('OSError in vlc exit: %r', e)
 		finally:
-			self.sock = None
+			self._close_sock()
 
 	def jump(self, dt):
-		t = int(self.cmd('get_time')[0])
-		return self.cmd('seek {}'.format(t + dt))
+		self._clear_buffer()
+		self._cmd('get_time')
+		t = int(self.recv_lines(1)[0])
+		self._cmd(f'seek {t+dt}')
+		self._clear_buffer()
 
 
 con = VideoLan()
 
+_DEFAULT_CMDS = {
+	'play': 'play',
+	'pause': 'pause',
+	'next': 'next',
+	'prev': 'prev',
+	'stop': 'stop',
+	'volup': 'volup 1',
+	'voldown': 'volup -1',
+	'volreset': 'volume 256',
+	'mute': 'volume 0'
+}
+
 def cmd(cmd, param=None):
-	if cmd[0].isalpha():
-		if cmd in {'play', 'pause', 'next', 'prev', 'stop'}:
-			pass
-		elif cmd.startswith('vol'):
-			c = cmd[3:]
-			if c == 'up':
-				cmd = 'volup 1'
-			elif c == 'down':
-				cmd = 'volup -1'
-			elif c == 'reset':
-				cmd = 'volume 256'
-		elif cmd == 'mute':
-			cmd = 'volume 0'
-		elif cmd.startswith('jump'):
-			try:
-				if param and cmd == 'jump':
-					param = int(param)
-				else:
-					param = {'jumpf': 10, 'jumpb': -10}[cmd]
-			except (ValueError, KeyError):
-				raise ValueError(f'cmd {cmd} with param {param} not possible')
-			con.jump(param)
-		elif cmd == 'start':
-			con.start()
-			return
-		elif cmd == 'exit':
-			con.exit()
-			return
+	if c := _DEFAULT_CMDS.get(cmd):
+		con.cmd(c)
+		return
+	if cmd.startswith('jump'):
+		if param and cmd == 'jump':
+			param = int(param)
 		else:
-			raise ValueError(f'cmd {cmd} unknown')
-	con.cmd(cmd)
+			param = {'jumpf': 10, 'jumpb': -10}[cmd]
+		con.jump(param)
+	elif cmd == 'start':
+		con.start()
+	elif cmd == 'exit':
+		con.exit()
+	else:
+		raise ValueError(f'cmd {cmd} unknown')

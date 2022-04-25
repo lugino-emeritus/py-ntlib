@@ -27,11 +27,11 @@ def update_pth(filename):
 		with open(filename, 'r') as f:
 			s = f.read()
 		if s:
-			if s[-1] != '\n':
-				newline = True
 			for i in s.split('\n'):
 				if i and os.path.abspath(i) == pth:
 					raise SystemExit(f'location already in {filename}')
+			if s[-1] != '\n':
+				newline = True
 	with open(filename, 'a') as f:
 		if newline:
 			f.write('\n')
