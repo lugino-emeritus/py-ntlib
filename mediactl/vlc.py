@@ -28,7 +28,7 @@ class VideoLan():
 
 	def _init_sock(self, addr):
 		self.sock = tsocket.create_connection(addr, timeout=0.1)
-		#self.sock.settimeout(0.01)
+		self.sock.settimeout(0.01)
 
 	def _close_sock(self):
 		if self.sock:
@@ -43,18 +43,16 @@ class VideoLan():
 			self.sock.clear_buffer(0.01)
 
 	def recv_lines(self, max_lines=10):
-		with self.sock.ensure_timeout():
-			self.sock.settimeout(0.01)
-			lines = []
-			try:
-				for _ in range(max_lines):
-					r = self.sock.recv_until(8192)
-					if not r:
-						break
-					lines.append(r.decode())
-			except tsocket.Timeout:
-				pass
-			return lines
+		lines = []
+		try:
+			for _ in range(max_lines):
+				r = self.sock.recv_until(8192)
+				if not r:
+					break
+				lines.append(r.decode())
+		except tsocket.Timeout:
+			pass
+		return lines
 
 	def _cmd(self, cmd):
 		self.sock.send(cmd.encode() + b'\n')
