@@ -5,13 +5,14 @@ import time
 from heapq import heappop, heappush
 from .fctthread import ThreadLoop
 
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 
 logger = logging.getLogger(__name__)
 
 #-------------------------------------------------------
 
 class _HeapKey:
+	# tuples does not work since timestamps may be identical and keys not sortable
 	def __init__(self, ts, key):
 		self.ts = ts
 		self.key = key
@@ -45,7 +46,7 @@ class RptSched:
 			if not (self.jobs and self._heap):
 				logger.debug('RptSched stop loop, jobsize: %d, heapsize: %d', len(self.jobs), len(self._heap))
 				self._heap.clear()
-				return True
+				return True  # stop thread loop
 			hk = heappop(self._heap)
 			ts = hk.ts
 			key = hk.key

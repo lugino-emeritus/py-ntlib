@@ -5,7 +5,7 @@ import socket
 import sys
 import time
 
-__version__ = '0.2.18'
+__version__ = '0.2.19'
 
 _TIMEOUT_MAX = 30.0  # used for udp or waiting for messages
 _TIMEOUT_TCP = 2.0  # timeout for connected tcp socket
@@ -218,13 +218,13 @@ def get_ipv6_addrlst(hostaddr, ipv6=None):
 	return af == socket.AF_INET6, lst
 
 def broadcast_addrs(port, ipv6=False):
-	"""Return all broadcast addresses to given port.
+	"""Return broadcast addresses to a given port.
 
 	ipv4: only ip '255.255.255.255',
 	ipv6: 'ff02::1' and '::ffff:255.255.255.255'
 	"""
-	return [('ff02::1', port), ('::ffff:255.255.255.255', port)] \
-		if ipv6 else [('255.255.255.255', port)]
+	return (('ff02::1', port), ('::ffff:255.255.255.255', port)) \
+		if ipv6 else (('255.255.255.255', port),)
 
 
 def create_connection(hostaddr, timeout=_TIMEOUT_MAX, bindaddr=None):
