@@ -75,7 +75,7 @@ class RptSched:
 			hk.ts = now + dt
 			heappush(self._heap, hk)
 		if (delay := now - (ts + dt)) >= 1.0:
-			logger.critical('RptSched loop %.3fs too slow, job: %s, heapsize: %d', delay, key, len(self._heap))
+			logger.warning('RptSched loop %.3fs too slow, job: %s, heapsize: %d', delay, key, len(self._heap))
 
 	def add_job(self, key=None, opt=None, *, delay=10.0):
 		if key is None:
