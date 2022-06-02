@@ -2,7 +2,7 @@
 
 Collection of python (3.8+) modules developed for various projects.
 
-To make it available in `sys.path` the folder must have the name ntlib. Then the script `_add_path.py` can be called to update (or create) the file mylibs.pth in site-packages with a link to this namespace package.
+To make it available in `sys.path` the cloned folder must have the name ntlib. Then the script `_add_path.py` can be called to add a link of this namespace package to the file mylibs.pth in site-packages or dist-packages.
 Thus, it is possible that the same installation can be used on different systems of a dual-boot computer. Furthermore, this allows the development of libraries without naming issues:
 
 ```
@@ -55,6 +55,9 @@ Module to call methods repeatedly. Also provides a global `RptSched` (`scheduler
 ## tsocket
 
 Wrapper over the python socket to use a timeout by default and simplify initialization of udp and ipv6 sockets.
+
+Version 0.2.18:
+rename `setsockopt_*` methods to `sopt_*`
 
 
 ## mediactl

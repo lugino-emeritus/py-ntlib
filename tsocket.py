@@ -4,14 +4,15 @@ import select
 import socket
 import sys
 import time
-from socket import (timeout as Timeout, gaierror as GAIError)
 
-__version__ = '0.2.16'
+__version__ = '0.2.19'
 
 _TIMEOUT_MAX = 30.0  # used for udp or waiting for messages
 _TIMEOUT_TCP = 2.0  # timeout for connected tcp socket
 
 HAS_IPV6 = socket.has_ipv6
+Timeout = socket.timeout
+GAIError = socket.gaierror
 
 #-------------------------------------------------------
 
@@ -40,11 +41,11 @@ class Socket(socket.socket):
 			if not isinstance(sock, socket.socket):
 				raise TypeError('sock must be socket.socket or None')
 			super().__init__(sock.family, sock.type, sock.proto, fileno=sock.detach())
-			self.settimeout(timeout or sock.gettimeout())
+			super().settimeout(timeout or sock.gettimeout())
 		else:
 			super().__init__(socket.AF_INET6 if ipv6 else socket.AF_INET,
 				socket.SOCK_DGRAM if udp else socket.SOCK_STREAM)
-			self.settimeout(timeout or _TIMEOUT_MAX)
+			super().settimeout(timeout or _TIMEOUT_MAX)
 		self._ensure_timeout = _EnsureTimeout(self)
 		self.maxtimeout = _TIMEOUT_MAX
 
@@ -59,7 +60,7 @@ class Socket(socket.socket):
 		(sock, addr) = super().accept()
 		return self.__class__(sock, timeout=self.timeout), addr
 	def taccept(self, timeout=_TIMEOUT_TCP):
-		"""Same as accept, but sets a different timeout."""
+		"""Same as accept, but also sets a different timeout."""
 		(sock, addr) = super().accept()
 		return self.__class__(sock, timeout=timeout), addr
 
@@ -153,9 +154,49 @@ class Socket(socket.socket):
 
 #-------------------------------------------------------
 
+def sopt_ipv6only(sock, v6only):
+	sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1 if v6only else 0)
+
+def sopt_reuseaddr(sock, enable):
+	sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1 if enable else 0)
+
+def sopt_broadcast(sock, enable):
+	sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1 if enable else 0)
+
+def sopt_add_multicast(sock, ip):
+	if sock.is_ipv6():
+		sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_JOIN_GROUP,
+			socket.inet_pton(socket.AF_INET6, ip) + b'\x00'*4)
+	else:
+		sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP,
+			socket.inet_pton(socket.AF_INET, ip) + b'\x00'*4)
+
+
 def is_ipv6_addr(addr):
 	(fam, _, _, _, addr) = socket.getaddrinfo(addr[0], addr[1])[0]
 	return fam == socket.AF_INET6, addr
+
+def find_free_addr(*args, udp=False):
+	"""Get a free ipv6 or ipv4 address.
+
+	First argument must be an address (ip, port) tuple,
+	followed by alternative ports or addresses.
+	Port 0 always returs a free port.
+	Set udp=True if no tcp port is needed.
+	"""
+	ip = args[0][0]
+	addrlst = (x if isinstance(x, tuple) else (ip, x) for x in args)
+	for addr in addrlst:
+		ipv6 = is_ipv6_addr(addr)[0] if addr[0] else HAS_IPV6
+		with Socket(ipv6=ipv6, udp=udp) as sock:
+			try:
+				if ipv6 and not addr[0]:
+					sopt_ipv6only(sock, False)
+				sock.bind(addr)
+				return (addr[0], sock.getsockname()[1])
+			except OSError:
+				pass
+	return None
 
 def get_ipv6_addrlst(hostaddr, ipv6=None):
 	lst = []
@@ -176,53 +217,44 @@ def get_ipv6_addrlst(hostaddr, ipv6=None):
 		raise GAIError(f'no ip address found for {hostaddr}')
 	return af == socket.AF_INET6, lst
 
-def find_free_addr(*args, udp=False):
-	"""Get a free ipv6 or ipv4 address.
+def broadcast_addrs(port, ipv6=False):
+	"""Return broadcast addresses to a given port.
 
-	First argument must be an address (ip, port) tuple,
-	followed by alternative ports or addresses.
-	Port 0 always returs a free port.
-	Set udp=True if no tcp port is needed.
+	ipv4: only ip '255.255.255.255',
+	ipv6: 'ff02::1' and '::ffff:255.255.255.255'
 	"""
-	ip = args[0][0]
-	addrlst = (x if isinstance(x, tuple) else (ip, x) for x in args)
-	for addr in addrlst:
-		with Socket(ipv6=is_ipv6_addr(addr)[0] if addr[0] else HAS_IPV6, udp=udp) as sock:
-			try:
-				if not addr[0] and HAS_IPV6: setsockopt_ipv6only(sock, False)
-				sock.bind(addr)
-				return (addr[0], sock.getsockname()[1])
-			except OSError:
-				pass
-	return None
+	return (('ff02::1', port), ('::ffff:255.255.255.255', port)) \
+		if ipv6 else (('255.255.255.255', port),)
 
 
-def create_serversock(addr, *, udp=False, reuseaddr=None):
-	"""Create a socket binded to addr."""
-	if addr[0]:
-		sock = Socket(ipv6=is_ipv6_addr(addr)[0], udp=udp)
-	else:
-		sock = Socket(ipv6=HAS_IPV6, udp=udp)
-		if HAS_IPV6:
-			setsockopt_ipv6only(sock, False)
-	if reuseaddr is not None:
-		setsockopt_reuseaddr(sock, reuseaddr)
-	if sys.platform.startswith('win'):
-		sock.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 0 if reuseaddr else 1)
-	sock.bind(addr)
-	return sock
-
-def create_connection(address, timeout=_TIMEOUT_MAX, source_address=None):
+def create_connection(hostaddr, timeout=_TIMEOUT_MAX, bindaddr=None):
 	"""Connect to a TCP address and return the socket."""
-	sock = socket.create_connection(address, timeout, source_address)
+	sock = socket.create_connection(hostaddr, timeout, bindaddr)
 	return Socket(sock, timeout=_TIMEOUT_TCP)
 
+def create_serversock(addr=('', 0), *, ipv6=None, udp=False, reuseaddr=None):
+	"""Create socket binded to addr.
 
-def setsockopt_ipv6only(sock, v6only):
-	sock.setsockopt(getattr(socket, 'IPPROTO_IPV6', 41), socket.IPV6_V6ONLY, 1 if v6only else 0)
-
-def setsockopt_reuseaddr(sock, enable):
-	sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1 if enable else 0)
-
-def setsockopt_broadcast(sock, enable):
-	sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1 if enable else 0)
+	If ipv6 is None the socket will listen on IPv4 and v6 if possible.
+	On UDP broadcast support is enabled,
+	TCP listens for new connections.
+	"""
+	if ipv6 is None:
+		ipv6 = is_ipv6_addr(addr)[0] if addr[0] else HAS_IPV6
+		sock = Socket(ipv6=ipv6, udp=udp)
+		if ipv6:
+			sopt_ipv6only(sock, False)
+	else:
+		sock = Socket(ipv6=ipv6, udp=udp)
+	if reuseaddr is not None:
+		sopt_reuseaddr(sock, reuseaddr)
+	if udp:
+		sopt_broadcast(sock, True)
+	if sys.platform.startswith('win'):
+		sock.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 0 if reuseaddr else 1)
+		if ipv6:
+			sopt_add_multicast(sock, 'ff02::1')
+	sock.bind(addr)
+	if not udp:
+		sock.listen()
+	return sock

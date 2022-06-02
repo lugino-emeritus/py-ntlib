@@ -256,7 +256,7 @@ class InputVolume:
 			self._stream = sd.InputStream(device=self._device, channels=1,
 				callback=self._callback, blocksize=self._blocksize, dtype=_DTYPE)
 		elif self._stream.active == self._stream.stopped:
-			raise RuntimeError('InputVolume is not healthy')
+			raise RuntimeError('InputVolume not healthy')
 		elif self._stream.active:
 			return
 		self._stream.start()
