@@ -5,7 +5,7 @@ import time
 from heapq import heappop, heappush
 from .fctthread import ThreadLoop
 
-__version__ = '0.1.3'
+__version__ = '0.1.4'
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ class RptSched:
 			ts = hk.ts
 			key = hk.key
 			if (dt := ts - time.monotonic()) > 0.0:
-				if self._job_update.wait(dt if dt < 150.0 else 150.0) or dt > 150.0:
+				if self._job_update.wait(dt if dt < 300.0 else 300.0) or dt > 300.0:
 					if key in self.jobs:
 						heappush(self._heap, hk)
 					return
@@ -75,7 +75,7 @@ class RptSched:
 			hk.ts = now + dt
 			heappush(self._heap, hk)
 		if (delay := now - (ts + dt)) >= 1.0:
-			logger.warning('RptSched loop %.3fs too slow, job: %s, heapsize: %d', delay, key, len(self._heap))
+			logger.warning('RptSched loop %.1fs too slow, job: %s, heapsize: %d', delay, key, len(self._heap))
 
 	def add_job(self, key=None, opt=None, *, delay=10.0):
 		if key is None:
