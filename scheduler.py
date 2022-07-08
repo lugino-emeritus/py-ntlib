@@ -1,4 +1,5 @@
 """Scheduler to call methods repeatedly."""
+
 import logging
 import threading
 import time

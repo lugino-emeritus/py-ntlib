@@ -5,6 +5,7 @@ play, pause, next, prev, stop
 volup, voldown, volreset, mute
 start, exit
 """
+
 import sys
 from .. import imp as ntimp
 from ..fctthread import start_app
