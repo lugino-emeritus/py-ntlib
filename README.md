@@ -29,7 +29,7 @@ Feel free to modify the source code for your own purposes.
 
 Provides the following methods:
 
-- `config_log(level='INFO')`: set a basic config for logging, it is possible to set an additional format
+- `config_log(level='INFO')`: set a basic config for logging, it is possible to set an additional format or a rotating log file
 - `options = load_config(name)`: import `_confpath.py` which defines a path to a json dictionary (*config.json*) containing `options` for ntlib module `name`
 
 - `reload(module)`: reload module, extends function from `importlib`

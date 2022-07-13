@@ -1,30 +1,40 @@
 """Provide import tools and can set a basic logging format."""
 
 import importlib as _il
+import logging
 import os.path as _osp
 import sys
 
-__version__ = '0.2.9'
+__version__ = '0.2.10'
 
 _confpath = None
 _aliases = None
 
 #-------------------------------------------------------
 
-def config_log(level='INFO', fmt='', *, force=True, handler=None):
+def config_log(level='INFO', fmt='', *, force=True, rotfile=None, addstd=False):
 	"""Configurate logging format to 'Level(time): [fmt] message'.
 
-	- level is known from logging, can be int or levelname
-	- fmt is an additional %-formatter
-	- force sets the root logger even if it already has a handler (default: True)
-	- handler is an alternative logging handler
+	Args:
+	- level: known from logging, can be int or levelname
+	- fmt: additional %-formatter
+	- force: sets the root logger even if it already has a handler
+	- rotfile: rotating log file (1MB, 2MB with DEBUG, 3 backups)
+	- addstd: if rotfile is defined also log to stdout
 
 	If more options are needed, use dictConfig or fileConfig from logging.config.
 	"""
-	import logging
+	level = logging._checkLevel(level)
 	fmt = ' '.join(x for x in ('%(levelname).1s[%(asctime)s]', fmt, '%(message)s') if x)
-	logging.basicConfig(format=fmt, level=level, force=force,
-		handlers=(handler,) if handler else None)
+	if rotfile:
+		from logging.handlers import RotatingFileHandler
+		h = RotatingFileHandler(rotfile, maxBytes=2**20 if level>10 else 2**21, backupCount=3)
+		if _osp.getsize(h.baseFilename) > 2047:
+			h.doRollover()
+		handlers = (h, logging.StreamHandler()) if addstd else (h,)
+	else:
+		handlers = (logging.StreamHandler(),)
+	logging.basicConfig(format=fmt, level=level, force=force, handlers=handlers)
 
 
 def init_confpath(p=None, *, force=False):
@@ -71,6 +81,7 @@ def import_alias(alias, modulename):
 	return import_path(modulename, path)
 
 def reload(module):
+	"""Reload the given module, but not its submodules."""
 	path, ext = _osp.splitext(module.__file__)
 	if ext != '.py':
 		raise ImportError(f"module '{module.__name__}' is no '.py' file: {module.__file__}")
