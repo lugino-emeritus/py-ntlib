@@ -5,7 +5,7 @@ import logging
 import os.path as _osp
 import sys
 
-__version__ = '0.2.10'
+__version__ = '0.2.11'
 
 _confpath = None
 _aliases = None
@@ -28,8 +28,8 @@ def config_log(level='INFO', fmt='', *, force=True, rotfile=None, addstd=False):
 	fmt = ' '.join(x for x in ('%(levelname).1s[%(asctime)s]', fmt, '%(message)s') if x)
 	if rotfile:
 		from logging.handlers import RotatingFileHandler
-		h = RotatingFileHandler(rotfile, maxBytes=2**20 if level>10 else 2**21, backupCount=3)
-		if _osp.getsize(h.baseFilename) > 2047:
+		h = RotatingFileHandler(rotfile, maxBytes=2**20 if level>10 else 2**21, backupCount=5)
+		if _osp.getsize(h.baseFilename) > 1023:
 			h.doRollover()
 		handlers = (h, logging.StreamHandler()) if addstd else (h,)
 	else:
