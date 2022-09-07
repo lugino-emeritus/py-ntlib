@@ -5,7 +5,7 @@ import logging
 import os.path as _osp
 import sys
 
-__version__ = '0.2.11'
+__version__ = '0.2.12'
 
 _confpath = None
 _aliases = None
@@ -18,8 +18,8 @@ def config_log(level='INFO', fmt='', *, force=True, rotfile=None, addstd=False):
 	Args:
 	- level: known from logging, can be int or levelname
 	- fmt: additional %-formatter
-	- force: sets the root logger even if it already has a handler
-	- rotfile: rotating log file (1MB, 2MB with DEBUG, 3 backups)
+	- force: set root logger even if it already has a handler
+	- rotfile: rotating log file (1MB, 2MB with DEBUG, 5 backups)
 	- addstd: if rotfile is defined also log to stdout
 
 	If more options are needed, use dictConfig or fileConfig from logging.config.
@@ -39,13 +39,12 @@ def config_log(level='INFO', fmt='', *, force=True, rotfile=None, addstd=False):
 
 def init_confpath(p=None, *, force=False):
 	global _confpath, _confload
-	if _confpath:
-		if not (p and force):
-			raise RuntimeError(f'confpath ({_confpath}) already defined')
-	else:
+	if _confpath is None:
 		from json import load as _confload
 		if p is None:
 			from ._confpath import confpath as p
+	elif p is None or not force:
+		raise RuntimeError(f'confpath ({_confpath}) already defined')
 	_confpath = _osp.abspath(p)
 
 def load_config(name):
