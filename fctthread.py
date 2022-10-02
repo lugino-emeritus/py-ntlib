@@ -7,7 +7,7 @@ import subprocess
 import sys
 import threading
 
-__version__ = '0.2.16'
+__version__ = '0.2.17'
 
 logger = logging.getLogger(__name__)
 
@@ -166,7 +166,7 @@ class QueueWorker:
 
 	def _start_thread(self):
 		# self._lock must be locked
-		if self._active_loops < self._maxthreads:
+		if self._enabled and self._active_loops < self._maxthreads:
 			threading.Thread(target=self._handle, daemon=True).start()
 			self._active_loops += 1
 
