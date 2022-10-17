@@ -7,7 +7,7 @@ import subprocess
 import sys
 import threading
 
-__version__ = '0.2.17'
+__version__ = '0.2.18'
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +61,29 @@ def start_daemon(target, args=(), kwargs=None):
 
 #-------------------------------------------------------
 
+class _FakeThread:
+	def __init__(self, target=None, *, daemon=True, activate=False):
+		self._target = target
+		if not daemon:
+			raise ValueError('FakeThread must be daemonized')
+		self._state = threading.Event()
+		if not activate:
+			self._state.set()
+
+	def run(self):
+		self._state.clear()
+		try:
+			self._target()
+		finally:
+			self._state.set()
+
+	def join(self, timeout=None):
+		self._state.wait(timeout)
+
+	def is_alive(self):
+		return not self._state.is_set()
+
+
 class ThreadLoop:
 	"""Class to control function in a daemon thread.
 
@@ -71,7 +94,7 @@ class ThreadLoop:
 		self._start_flag = False
 		self._should_run = False
 		self._stop_flag = False
-		self._t = None
+		self._t = _FakeThread()
 		self._lock = threading.Lock()
 
 	def _handle(self):
@@ -88,28 +111,39 @@ class ThreadLoop:
 					self._start_flag = False
 					self._should_run = True
 				else:
+					logger.debug('ThreadLoop stop handle of %s', self._target)
 					self._should_run = False
 					# stop flag is used for the rare case when this handle stops
 					# but the thread is still alive and start is called
 					self._stop_flag = True
-					logger.debug('ThreadLoop stop handle of %s', self._target)
 					return
+
+	def run(self):
+		"""Run target as loop in the thread of the caller.
+
+		Raise a RuntimeError if loop is already alive.
+		Can be stopped by a KeyboardInterrupt or calling stop() from an other thread.
+		"""
+		with self._lock:
+			if self._t.is_alive():
+				raise RuntimeError('ThreadLoop already active')
+			self._start_flag = True
+			self._stop_flag = False
+			self._t = _FakeThread(self._handle, activate=True)
+		self._t.run()
 
 	def start(self):
 		with self._lock:
 			self._start_flag = True
-			if self._t:
-				if self._stop_flag:
-					self._t.join()
-				elif self._t.is_alive():
-					return
+			if self._stop_flag:
+				self._t.join()
+			elif self._t.is_alive():
+				return
 			self._stop_flag = False
 			self._t = threading.Thread(target=self._handle, daemon=True)
 			self._t.start()
 
 	def stop(self, timeout=None):
-		if not self._t:
-			return True
 		with self._lock:
 			self._start_flag = False
 			self._should_run = False
@@ -117,12 +151,12 @@ class ThreadLoop:
 		return not self._t.is_alive()
 
 	def join(self, timeout=None):
-		if self._t:
-			self._t.join(timeout)
+		self._t.join(timeout)
 
 	def is_alive(self):
-		return self._t.is_alive() if self._t else False
+		return self._t.is_alive()
 
+#-------------------------------------------------------
 
 class QueueWorker:
 	"""Class to process elements from a queue in separate threads.

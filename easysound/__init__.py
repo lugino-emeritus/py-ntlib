@@ -119,7 +119,7 @@ class FilePlayer:
 		self._file.seek(0)
 		for _ in range(_BUFFERFILL):
 			data = self._read_sound_data()
-			self._q.put(data, timeout=0.0)
+			self._q.put(data, block=False)
 			if data is None:
 				break
 
@@ -163,7 +163,7 @@ class FilePlayer:
 			logger.error('FilePlayer callback status: %s', status)
 			raise sd.CallbackAbort
 		try:
-			data = self._q.get(timeout=0.0)
+			data = self._q.get(block=False)
 		except queue.Empty:
 			logger.warning('Buffer is empty: increase buffersize?')
 			outdata[:] = 0

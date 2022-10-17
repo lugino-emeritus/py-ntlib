@@ -1,6 +1,6 @@
 import argparse
+import ntlib.imp as ntimp
 from __init__ import *
-from .. import imp as ntimp
 
 ntimp.config_log()
 
