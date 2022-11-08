@@ -8,7 +8,7 @@ import sounddevice as sd
 import soundfile as sf
 import threading
 
-__version__ = '0.2.8'
+__version__ = '0.2.9'
 
 _DTYPE = 'float32'  # float32 is highly recommended
 _BLOCKTIMEFRAC = 20  # 48000 / 20 = 2400 -> results in blocksize = 4096
@@ -20,25 +20,6 @@ assert _BUFFERFILL <= _BUFFERSIZE
 logger = logging.getLogger(__name__)
 
 #-------------------------------------------------------
-
-def _alt_file(filename):
-	if os.path.isfile(filename):
-		return filename
-	if os.path.basename(filename) == filename:
-		alt = os.path.join(os.path.dirname(__file__), 'sounds', filename)
-		if not os.path.splitext(alt)[1]:
-			alt += '.wav'
-		if os.path.isfile(alt):
-			return alt
-	raise FileNotFoundError(f'no such sound file: {filename}')
-
-def _check_output(device, channels, samplerate):
-	try:
-		sd.check_output_settings(device=device, channels=channels, dtype=_DTYPE, samplerate=samplerate)
-		return None
-	except sd.PortAudioError as e:
-		return e
-
 
 class FilePlayer:
 	def __init__(self, filename, *, device=None, channels=None):
@@ -76,7 +57,6 @@ class FilePlayer:
 		self._vol_array = np.eye(self._file.channels, self._stream.channels, dtype=_DTYPE)
 		logger.debug('FilePlayer initialized: %s', self.info())
 
-
 	def __del__(self):
 		logger.debug('del FilePlayer')
 		try:
@@ -86,6 +66,17 @@ class FilePlayer:
 		except Exception as e:
 			logger.error('FilePlayer __del__ failed: %r', e)
 
+	def _reinit(self):
+		if self.is_alive():
+			raise RuntimeError('FilePlayer is alive, reinit not possible')
+		logger.warning('FilePlayer reinit: %s', self.info())
+		with self._q.mutex:
+			self._q.queue.clear()
+		self._file = sf.SoundFile(self._file.name)
+		self._stream = sd.OutputStream(
+			samplerate=self._stream.samplerate, blocksize=self._stream.blocksize,
+			device=self._stream.device, channels=self._stream.channels, dtype=self._stream.dtype,
+			callback=self._callback, finished_callback=self._stopped.set)
 
 	@property
 	def channel_shape(self):
@@ -107,7 +98,6 @@ class FilePlayer:
 		elif self._stream.active:
 			return
 		self._seek_buffer()
-
 
 	def _seek_buffer(self):
 		if qsize := self._q.qsize():
@@ -173,7 +163,6 @@ class FilePlayer:
 			raise sd.CallbackStop
 		outdata[:] = data
 
-
 	def is_alive(self):
 		return self._t.is_alive() if self._t else False
 
@@ -181,9 +170,18 @@ class FilePlayer:
 		if self._t:
 			self._t.join(timeout)
 
-	def play(self):
-		if self.is_alive() or self._stream.closed:
+	def play(self, *, reinit=True):
+		"""Plays the sound.
+
+		If reinit is True (default), then a new stream is created if already closed.
+		"""
+		if self.is_alive():
 			return False
+		if self._stream.closed:
+			if reinit:
+				self._reinit()
+			else:
+				return False
 		self._t = threading.Thread(target=self._play, daemon=True)
 		self._t.start()
 		return True
@@ -234,7 +232,6 @@ class InputVolume:
 		except Exception as e:
 			logger.error('InputVolume __del__ failed: %r', e)
 
-
 	def _callback(self, indata, frames, time, status):
 		if status:
 			logger.error('InputVolume callback status: %s', status)
@@ -281,8 +278,27 @@ class InputVolume:
 
 #-------------------------------------------------------
 
+def _alt_file(filename):
+	if os.path.isfile(filename):
+		return filename
+	if os.path.basename(filename) == filename:
+		alt = os.path.join(os.path.dirname(__file__), 'sounds', filename)
+		if not os.path.splitext(alt)[1]:
+			alt += '.wav'
+		if os.path.isfile(alt):
+			return alt
+	raise FileNotFoundError(f'no such sound file: {filename}')
+
+def _check_output(device, channels, samplerate):
+	try:
+		sd.check_output_settings(device=device, channels=channels, dtype=_DTYPE, samplerate=samplerate)
+		return None
+	except sd.PortAudioError as e:
+		return e
+
+
 def list_devices():
-	return [d.strip() for d in str(sd.query_devices()).split('\n')]
+	return [d['name'] for d in sd.query_devices()]
 
 def create_vol_array(channel_shape, mono=False, outputs=None, vol=1.0):
 	ch_in_num, ch_out_num = channel_shape
