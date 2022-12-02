@@ -2,7 +2,7 @@ import datetime
 
 from .connect import *
 
-__version__ = '0.1.8'
+__version__ = '0.1.9'
 
 #-------------------------------------------------------
 
@@ -40,6 +40,7 @@ class MiniSheet:
 	def __setitem__(self, idx, val):
 		self.sheet[idx].DataArray = ((val,),)
 
+#-------------------------------------------------------
 
 def data_to_str(data):
 	if isinstance(data, str):
@@ -55,3 +56,18 @@ def to_dtime(tday):
 	return _DAY0 + datetime.timedelta(days=tday)
 def from_dtime(tval):
 	return (tval-_DAY0).total_seconds() / 86400.0
+
+
+def cell_coordiante(s):
+	s = s.replace('$', '')
+	i = next((i for i, k in enumerate(s) if k.isnumeric()), -1)
+	if i >= 0:
+		col = s[:i].upper()
+		row = int(s[i:])-1
+	else:
+		col = s.upper()
+		row = -1
+	x = 0
+	for k in col:
+		x = 26 * x + ord(k) - 64
+	return row, x-1

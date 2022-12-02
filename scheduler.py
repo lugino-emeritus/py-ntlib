@@ -120,7 +120,7 @@ def add_job(cb, dt=None, *, delay=None):
 	global glob_sched
 	if delay is None:
 		if dt is None:
-			raise TypeError("argument 'dt' or 'delay' must be a positive number")
+			raise TypeError("argument 'dt' or 'delay' must be a nonnegative number")
 		delay = dt
 	if glob_sched is None:
 		glob_sched = RptSched(_call_dt)

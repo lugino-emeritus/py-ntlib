@@ -7,7 +7,7 @@ import subprocess
 import sys
 import threading
 
-__version__ = '0.2.18'
+__version__ = '0.2.20'
 
 logger = logging.getLogger(__name__)
 
@@ -22,12 +22,10 @@ _ENCODING = 'utf-8'
 if sys.platform.startswith('linux'):
 	def _start_file(cmd):
 		_popen_ext(('xdg-open', cmd))
-
 elif sys.platform.startswith('win'):
 	_ENCODING = 'cp850'
 	def _start_file(cmd):
 		os.startfile(cmd)
-
 else:
 	logger.warning('fctthread not fully supported on %s', sys.platform)
 	def _start_file(cmd):
@@ -35,8 +33,12 @@ else:
 
 
 def shell_cmd(cmd):
-	"""Return stdout of a shell command."""
-	return subprocess.run(cmd, shell=True, encoding=_ENCODING, errors='replace',
+	"""Execute command and return stdout.
+
+	- cmd can be a string or a iterable containing args: (exe, arg1, ...)
+	- stderr is redirected to stdout
+	"""
+	return subprocess.run(cmd, shell=isinstance(cmd, str), encoding=_ENCODING, errors='replace',
 		stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
 
 def start_app(cmd):
@@ -199,7 +201,7 @@ class QueueWorker:
 						return
 
 	def _start_thread(self):
-		# self._lock must be locked
+		assert self._lock.locked()
 		if self._enabled and self._active_loops < self._maxthreads:
 			threading.Thread(target=self._handle, daemon=True).start()
 			self._active_loops += 1

@@ -5,7 +5,7 @@ import logging
 import os.path as _osp
 import sys
 
-__version__ = '0.2.12'
+__version__ = '0.2.13'
 
 _confpath = None
 _aliases = None
@@ -66,7 +66,10 @@ class _EnsureSysPath:
 
 def import_path(modulename, path='.'):
 	"""Import module from a given path, defaults to CWD."""
-	with _EnsureSysPath(path):
+	path = _osp.abspath(path)
+	if not _osp.isdir(path):
+		raise ImportError(f'no directory: {path}')
+	with _EnsureSysPath(_osp.abspath(path)):
 		return _il.import_module(modulename)
 
 def import_alias(alias, modulename):
