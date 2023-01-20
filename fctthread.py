@@ -7,7 +7,7 @@ import subprocess
 import sys
 import threading
 
-__version__ = '0.2.20'
+__version__ = '0.2.21'
 
 logger = logging.getLogger(__name__)
 
@@ -165,7 +165,7 @@ class QueueWorker:
 
 	If a thread is not called within timeout seconds it will be stopped.
 	"""
-	def __init__(self, target, maxthreads=2, *, timeout=10.0):
+	def __init__(self, target, maxthreads=2, *, timeout=10.0, qsize=None):
 		if maxthreads <= 0:
 			raise ValueError('number of threads must be at least 1')
 		if timeout < 0.0:
@@ -176,7 +176,7 @@ class QueueWorker:
 
 		self._enabled = False
 		self._active_loops = 0
-		self._q = queue.Queue(maxthreads)
+		self._q = queue.Queue(qsize or maxthreads)
 		self._lock = threading.Lock()
 		self._all_done = threading.Condition(self._lock)
 
@@ -241,7 +241,7 @@ class QueueWorker:
 class CmpEvent:
 	"""Class to receive data from another thread after a successful comparison.
 
-	This data is accessible with CmpEvent.result.
+	This data is accessible in the variable result.
 	An optional answer can be sent to the compare thread.
 	"""
 	def __init__(self, cmpfct=lambda x,y: x==y):

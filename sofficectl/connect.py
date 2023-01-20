@@ -6,15 +6,17 @@ import uno
 from .. import imp as ntimp
 from ..fctthread import start_app
 
-__version__ = '0.1.5'
+__version__ = '0.1.8'
 
 _START_CMD, _PORT = ntimp.load_config('sofficectl')
+
+raise RuntimeError('This module is outated, use connect from sofficectl')
 
 #-------------------------------------------------------
 
 def _init_ctx():
 	lctx = uno.getComponentContext()  # local context
-	resolver = lctx.ServiceManager.createInstanceWithContext('com.sun.star.bridge.UnoUrlResolver', lctx)
+	resolver = lctx.ServiceManager.createInstance('com.sun.star.bridge.UnoUrlResolver')
 	resolve_param = f'uno:socket,host=localhost,port={_PORT};urp;StarOffice.ComponentContext'
 	try:
 		ctx = resolver.resolve(resolve_param)
@@ -39,12 +41,14 @@ def _norm_filepath(path):
 def _find_doc(ctx, title, path):
 	res = []
 	for m in ctx.Components:
-		m_path = getattr(m, 'Location', None)
-		if m_path and path == _norm_filepath(m_path):
-			return m
-		m_title = getattr(m, 'Title', None)
-		if m_title and title in m_title:
-			res.append(m)
+		if m_path := getattr(m, 'Location', None):
+			if path == _norm_filepath(m_path):
+				return m
+		if m_title := getattr(m, 'Title', None):
+			if title == m_title:
+				return m
+			elif title.lower() in m_title.lower():
+				res.append(m)
 	if res:
 		if len(res) == 1:
 			return res[0]
@@ -53,7 +57,7 @@ def _find_doc(ctx, title, path):
 
 #-------------------------------------------------------
 
-def connect_to(name=''):
+def connect(name=''):
 	ctx = _init_ctx()
 	path = os.path.abspath(name)
 	if model := _find_doc(ctx, name, path):

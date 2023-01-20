@@ -8,7 +8,7 @@ import sounddevice as sd
 import soundfile as sf
 import threading
 
-__version__ = '0.2.9'
+__version__ = '0.2.10'
 
 _DTYPE = 'float32'  # float32 is highly recommended
 _BLOCKTIMEFRAC = 20  # 48000 / 20 = 2400 -> results in blocksize = 4096
@@ -298,7 +298,15 @@ def _check_output(device, channels, samplerate):
 
 
 def list_devices():
+	"""Show output devices.
+
+	Probably not useful with pulseaudio.
+	"""
 	return [d['name'] for d in sd.query_devices()]
+
+def device_index(query):
+	"""Search a device with a given query and returns its index ."""
+	return sd.query_devices(query)['index']
 
 def create_vol_array(channel_shape, mono=False, outputs=None, vol=1.0):
 	ch_in_num, ch_out_num = channel_shape
@@ -313,7 +321,10 @@ def create_vol_array(channel_shape, mono=False, outputs=None, vol=1.0):
 	return vol_array
 
 def new_playback(filename, *, device=None, channels=None, outputs=None, mono=False, vol=1.0):
-	"""Return FilePlayer configured to use a given device and channels."""
+	"""Return FilePlayer configured to use a given device and channels.
+
+	The device setting may not work as expected when using pulseaudio.
+	"""
 	fp = FilePlayer(_alt_file(filename), device=device, channels=channels)
 	vol_array = create_vol_array(fp.channel_shape, mono, outputs, vol)
 	fp.set_vol_array(vol_array)

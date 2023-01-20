@@ -6,7 +6,7 @@ import time
 from heapq import heappop, heappush
 from .fctthread import ThreadLoop
 
-__version__ = '0.1.4'
+__version__ = '0.1.5'
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,9 @@ class RptSched:
 	def _loop(self):
 		with self._lock:
 			if not (self.jobs and self._heap):
-				logger.debug('RptSched stop loop, jobsize: %d, heapsize: %d', len(self.jobs), len(self._heap))
+				logger.log(logging.WARNING if self.jobs else logging.DEBUG,
+					'RptSched stop loop, jobsize: %d, heapsize: %d', len(self.jobs), len(self._heap))
+				self.jobs.clear()
 				self._heap.clear()
 				return True  # stop thread loop
 			hk = heappop(self._heap)

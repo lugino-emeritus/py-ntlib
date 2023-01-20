@@ -32,7 +32,8 @@ if not args.filename:
 		parser.print_help()
 	exit()
 
-pb = new_playback(args.filename, device=args.device, channels=args.channels,
+device = device_index(args.device) if args.device else None
+pb = new_playback(args.filename, device=device, channels=args.channels,
 	outputs=args.outputs, mono=args.mono, vol=args.volume/100.0)
 pb.play()
 print(pb.info())

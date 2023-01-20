@@ -29,7 +29,7 @@ Feel free to modify the source code for your own purposes.
 
 Provides the following methods:
 
-- `config_log(level='INFO')`: set a basic config for logging, it is possible to set an additional format or a rotating log file
+- `config_log(level='INFO')`: set a basic config for logging, it is possible to set an additional formatter or a rotating log file
 - `options = load_config(name)`: import `_confpath.py` which defines a path to a json dictionary (*config.json*) containing `options` for ntlib module `name`
 
 - `reload(module)`: reload module, extends function from `importlib`
@@ -56,9 +56,6 @@ Module to call methods repeatedly. Also provides a global `RptSched` (`scheduler
 
 Wrapper over the python socket to use a timeout by default and simplify initialization of udp and ipv6 sockets.
 
-Version 0.2.18:
-rename `setsockopt_*` methods to `sopt_*`
-
 
 ## mediactl
 
@@ -68,7 +65,7 @@ The paths to the applications are defined in the config.
 
 ## easysound
 
-Using modules sounddevice and soundfile playback audio files on a specific device and channels:
+Using modules sounddevice and soundfile to playback audio files on a specific output:
 
 ```py
 import ntlib.easysound as esound
@@ -76,7 +73,7 @@ fp = esound.new_playback('beeps.wav', device=None, channels=2, outputs=(1,), mon
 # outputs = (1,): playback only on right channel
 # outputs = (1, 0): swap right and left channel
 fp.play()
-# fp.stop()
+#fp.stop()
 fp.join()
 fp.close()
 ```
@@ -99,15 +96,17 @@ invol.stop()
 invol.close()
 ```
 
+When using pulseaudio on linux, the device option should be avoided.
+
 ## sofficectl
 
 Helps connecting python with an open LibreOffice or OpenOffice file using `uno`. Especially useful for calc.
 The config contains the connection parameters.
 
 ```py
-import ntlib.sofficectl.calctools as calctools
+import ntlib.sofficectl.calctools as ctools
 
-model = calctools.connect_to('path.ods or name of opened file')
+model = calctools.connect('path.ods or name of opened file')
 sheet = calctools.MiniSheet(model.Sheets[0])
 
 sheet.set_data('A3', 'Hello World')
@@ -118,3 +117,6 @@ print(sheet.get_array('A1', 'B3'))
 ```
 
 `to_dtime` and `from_dtime` converts office time values to `datetime`.
+
+**New in 0.2.0:**
+Module connect.py moved to __init__, use connect instead of connect_to.
