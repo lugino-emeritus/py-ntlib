@@ -8,7 +8,7 @@ import sounddevice as sd
 import soundfile as sf
 import threading
 
-__version__ = '0.2.10'
+__version__ = '0.3.0'
 
 _DTYPE = 'float32'  # float32 is highly recommended
 _BLOCKTIMEFRAC = 20  # 48000 / 20 = 2400 -> results in blocksize = 4096
@@ -19,10 +19,35 @@ assert _BUFFERFILL <= _BUFFERSIZE
 
 logger = logging.getLogger(__name__)
 
+'''
+TODO:
+record on arbitrary channel
+defrag code of File Player
+'''
+
 #-------------------------------------------------------
 
+def _alt_file(filename):
+	if os.path.isfile(filename):
+		return filename
+	if os.path.basename(filename) == filename:
+		alt = os.path.join(os.path.dirname(__file__), 'sounds', filename)
+		if not os.path.splitext(alt)[1]:
+			alt += '.wav'
+		if os.path.isfile(alt):
+			return alt
+	raise FileNotFoundError(f'no such sound file: {filename}')
+
+def _check_output(device, channels, samplerate):
+	try:
+		sd.check_output_settings(device=device, channels=channels, dtype=_DTYPE, samplerate=samplerate)
+		return None
+	except sd.PortAudioError as e:
+		return e
+
+
 class FilePlayer:
-	def __init__(self, filename, *, device=None, channels=None):
+	def __init__(self, filename, *, device=None, channels=None, prepare=True):
 		"""Class to handle audio playback on specific device and channels."""
 		self._file = sf.SoundFile(filename)
 		try:
@@ -39,119 +64,82 @@ class FilePlayer:
 			self._file.close()
 			raise
 
-		self._t = None
 		self._should_run = False
+		self._q = queue.Queue(maxsize=_BUFFERSIZE)
+		self._stopped = threading.Event()
 		self._blocksize = 1 << (self._file.samplerate // _BLOCKTIMEFRAC).bit_length()
 		if self._blocksize > _MAX_BLOCKSIZE:
 			self._blocksize = _MAX_BLOCKSIZE
-		self._q = queue.Queue(maxsize=_BUFFERSIZE)
-		self._timeout = 0.1 +  _BUFFERSIZE * self._blocksize / self._file.samplerate
+		self._timeout = 0.1 + self._blocksize / self._file.samplerate
 
-		self._stopped = threading.Event()
-		self._stream = sd.OutputStream(
-			samplerate=self._file.samplerate, blocksize=self._blocksize,
-			device=device, channels=ch, dtype=_DTYPE,
-			callback=self._callback, finished_callback=self._stopped.set)
-		if channels and channels != self._stream.channels:
-			logger.warning('use %d output channels instead of %d', self._stream.channels, channels)
-		self._vol_array = np.eye(self._file.channels, self._stream.channels, dtype=_DTYPE)
+		self._init_stream(device, ch)
+		self._device = self._stream.device
+		self._outchannels = self._stream.channels
+		self._vol_array = np.eye(self._file.channels, self._outchannels, dtype=_DTYPE)
+
+		if channels and channels != self._outchannels:
+			logger.warning('use %d output channels instead of %d', self._outchannels, channels)
+		if prepare:
+			self._init_buffer()
 		logger.debug('FilePlayer initialized: %s', self.info())
 
 	def __del__(self):
 		logger.debug('del FilePlayer')
 		try:
-			for a in ('_stream', '_file'):
-				if obj := getattr(self, a, None):
-					obj.close()
-		except Exception as e:
-			logger.error('FilePlayer __del__ failed: %r', e)
+			self._file.close()
+			if self._stream.active:
+				logger.critical('FilePlayer stream active in __del__')
+				self._should_run = False
+			else:
+				self._stream.close()
+		except Exception:
+			logger.exception('FilePlayer.__del__ failed')
 
-	def _reinit(self):
-		if self.is_alive():
-			raise RuntimeError('FilePlayer is alive, reinit not possible')
-		logger.warning('FilePlayer reinit: %s', self.info())
+	def _init_stream(self, device, channels):
+		self._t = threading.Thread(target=self._play, daemon=True)
+		self._stream = sd.OutputStream(
+			samplerate=self._file.samplerate, blocksize=self._blocksize,
+			device=device, channels=channels, dtype=_DTYPE,
+			callback=self._callback, finished_callback=self._stopped.set)
+		logger.debug('stream initialized')
+
+	def _init_buffer(self):
+		self._file.seek(0)
 		with self._q.mutex:
 			self._q.queue.clear()
-		self._file = sf.SoundFile(self._file.name)
-		self._stream = sd.OutputStream(
-			samplerate=self._stream.samplerate, blocksize=self._stream.blocksize,
-			device=self._stream.device, channels=self._stream.channels, dtype=self._stream.dtype,
-			callback=self._callback, finished_callback=self._stopped.set)
-
-	@property
-	def channel_shape(self):
-		return (self._file.channels, self._stream.channels)
-
-	@property
-	def vol_array(self):
-		return self._vol_array
-
-	def set_vol_array(self, vol_array):
-		"""numpy array which maps input channels to output channels."""
-		if vol_array.shape != self.channel_shape:
-			raise ValueError(f'vol_array (shape {vol_array.shape}) must have shape {self.channel_shape}')
-		self._vol_array = vol_array
-
-	def init_buffer(self):
-		if self._stream.closed:
-			raise RuntimeError('FilePlayer closed')
-		elif self._stream.active:
-			return
-		self._seek_buffer()
-
-	def _seek_buffer(self):
-		if qsize := self._q.qsize():
-			if self._file.tell() == qsize * self._blocksize:
-				return
-			with self._q.mutex:
-				self._q.queue.clear()
-		logger.debug('fill buffer from %s', self._file.name)
-		self._file.seek(0)
 		for _ in range(_BUFFERFILL):
 			data = self._read_sound_data()
 			self._q.put(data, block=False)
 			if data is None:
 				break
+		logger.debug('buffer initialized')
 
-	def _read_sound_data(self):
-		try:
-			in_array = self._file.read(self._blocksize, dtype=_DTYPE, always_2d=True)
-			if not in_array.shape[0]:
-				return None
-			if in_array.shape[0] != self._blocksize:
-				in_array.resize(self._blocksize, in_array.shape[1])
-			return np.matmul(in_array, self._vol_array)
-		except Exception as e:
-			logger.info('reading data failed: %r', e)
-			return None
+	@property
+	def closed(self):
+		return self._file.closed
+	@property
+	def channel_shape(self):
+		return (self._file.channels, self._outchannels)
+	@property
+	def vol_array(self):
+		return self._vol_array
 
-	def _play(self):
-		self._should_run = True
-		self._stopped.clear()
-		self._seek_buffer()
-		try:
-			self._stream.start()
-			while self._should_run:
-				data = self._read_sound_data()
-				if data is None:
-					self._q.put(0, timeout=self._timeout)
-					self._q.put(None, timeout=self._timeout)
-					break
-				self._q.put(data, timeout=self._timeout)
-			else:
-				self._stream.stop()
-			self._should_run = False
-			self._stopped.wait(self._timeout)
-			self._stream.stop()
-		except Exception as e:
-			if self._should_run or not self._stream.closed:
-				logger.exception('exception occured in _play: %r', e)
-			self.close()
+	def is_alive(self):
+		return self._t.is_alive()
+	def join(self, timeout=None):
+		self._t.join(timeout)
+
+	def prepare(self):
+		self._init_stream(self._device, self._outchannels)
+		self._init_buffer()
 
 	def _callback(self, outdata, frames, time, status):
 		if status:
 			logger.error('FilePlayer callback status: %s', status)
 			raise sd.CallbackAbort
+		if not self._should_run:
+			outdata[:] = 0
+			raise sd.CallbackStop
 		try:
 			data = self._q.get(block=False)
 		except queue.Empty:
@@ -163,47 +151,80 @@ class FilePlayer:
 			raise sd.CallbackStop
 		outdata[:] = data
 
-	def is_alive(self):
-		return self._t.is_alive() if self._t else False
 
-	def join(self, timeout=None):
-		if self._t:
-			self._t.join(timeout)
+	def set_vol_array(self, vol_array):
+		"""numpy array from input channels to output channels."""
+		if vol_array.shape != self.channel_shape:
+			raise ValueError(f'vol_array (shape {vol_array.shape}) must have shape {self.channel_shape}')
+		self._vol_array = vol_array
+		if not self._t.is_alive():
+			self._init_buffer()
 
-	def play(self, *, reinit=True):
-		"""Plays the sound.
+	def _read_sound_data(self):
+		try:
+			in_array = self._file.read(self._blocksize, dtype=_DTYPE, always_2d=True)
+			if not in_array.shape[0]:
+				return None
+			if in_array.shape[0] != self._blocksize:
+				in_array.resize(self._blocksize, in_array.shape[1])
+			return np.matmul(in_array, self._vol_array)
+		except Exception as e:
+			logger.warning('reading data failed: %r', e)
+			return None
 
-		If reinit is True (default), then a new stream is created if already closed.
-		"""
-		if self.is_alive():
-			return False
-		if self._stream.closed:
-			if reinit:
-				self._reinit()
+	def _play(self):
+		self._should_run = True
+		self._stopped.clear()
+		try:
+			self._stream.start()
+			while self._should_run:
+				data = self._read_sound_data()
+				if data is None:
+					self._q.put(0, timeout=self._timeout)
+					logging.info('end of soundfile')
+					break
+				self._q.put(data, timeout=self._timeout)
 			else:
-				return False
-		self._t = threading.Thread(target=self._play, daemon=True)
+				logging.info('should_run set to false')
+			self._q.put(None, timeout=self._timeout)
+			self._stopped.wait(_BUFFERSIZE * self._timeout)
+			self._should_run = False
+		except Exception as e:
+			if not self._should_run and isinstance(e, queue.Full):
+				logger.debug('should_run is false with error %r', e)
+				return
+			logger.exception('exception occured in FilePlayer._play')
+			self._file.close()
+		finally:
+			if self._stream.active:
+				logger.warning('stream still active, but reached end')
+			self._stream.close()
+
+
+	def play(self):
+		"""Play the sound."""
+		if self._t.is_alive() or self.closed:
+			return False
+		if self._file.tell() != self._q.qsize() * self._blocksize:
+			self.prepare()
 		self._t.start()
 		return True
 
 	def stop(self, timeout=None):
-		if not self.is_alive():
-			return True
 		self._should_run = False
-		self.join(timeout)
-		return not self.is_alive()
+		self._t.join(timeout)
+		return not self._t.is_alive()
 
 	def close(self):
 		self._should_run = False
-		self._stream.close()
 		self._file.close()
 
 	def info(self):
-		return {'initialized': not self._stream.closed and not self._file.closed, 'is_alive': self.is_alive(),
-			'in_channels': self._file.channels, 'out_channels': self._stream.channels,
+		return {'initialized': not self._stream.closed, 'closed': self._file.closed,
+			'is_alive': self._t.is_alive(),  'file': self._file.name,
+			'in_channels': self._file.channels, 'out_channels': self._outchannels,
 			'samplerate': self._file.samplerate, 'blocksize': self._blocksize,
-			'buffersize': _BUFFERSIZE, 'buffer_filled': self._q.qsize(),
-			'file': self._file.name}
+			'buffersize': _BUFFERSIZE, 'buffer_filled': self._q.qsize()}
 
 #-------------------------------------------------------
 
@@ -278,35 +299,12 @@ class InputVolume:
 
 #-------------------------------------------------------
 
-def _alt_file(filename):
-	if os.path.isfile(filename):
-		return filename
-	if os.path.basename(filename) == filename:
-		alt = os.path.join(os.path.dirname(__file__), 'sounds', filename)
-		if not os.path.splitext(alt)[1]:
-			alt += '.wav'
-		if os.path.isfile(alt):
-			return alt
-	raise FileNotFoundError(f'no such sound file: {filename}')
-
-def _check_output(device, channels, samplerate):
-	try:
-		sd.check_output_settings(device=device, channels=channels, dtype=_DTYPE, samplerate=samplerate)
-		return None
-	except sd.PortAudioError as e:
-		return e
-
-
 def list_devices():
 	"""Show output devices.
 
 	Probably not useful with pulseaudio.
 	"""
 	return [d['name'] for d in sd.query_devices()]
-
-def device_index(query):
-	"""Search a device with a given query and returns its index ."""
-	return sd.query_devices(query)['index']
 
 def create_vol_array(channel_shape, mono=False, outputs=None, vol=1.0):
 	ch_in_num, ch_out_num = channel_shape
@@ -323,10 +321,9 @@ def create_vol_array(channel_shape, mono=False, outputs=None, vol=1.0):
 def new_playback(filename, *, device=None, channels=None, outputs=None, mono=False, vol=1.0):
 	"""Return FilePlayer configured to use a given device and channels.
 
-	The device setting may not work as expected when using pulseaudio.
+	The device setting could not work as expected when using pulseaudio.
 	"""
-	fp = FilePlayer(_alt_file(filename), device=device, channels=channels)
+	fp = FilePlayer(_alt_file(filename), device=device, channels=channels, prepare=False)
 	vol_array = create_vol_array(fp.channel_shape, mono, outputs, vol)
 	fp.set_vol_array(vol_array)
-	fp.init_buffer()
 	return fp
