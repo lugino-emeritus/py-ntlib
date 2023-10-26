@@ -5,7 +5,7 @@ import socket
 import sys
 import time
 
-__version__ = '0.2.19'
+__version__ = '0.2.20'
 
 _TIMEOUT_MAX = 30.0  # used for udp or waiting for messages
 _TIMEOUT_TCP = 2.0  # timeout for connected tcp socket
@@ -252,7 +252,7 @@ def create_serversock(addr=('', 0), *, ipv6=None, udp=False, reuseaddr=None):
 		sopt_broadcast(sock, True)
 	if sys.platform.startswith('win'):
 		sock.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 0 if reuseaddr else 1)
-		if ipv6:
+		if udp and ipv6:
 			sopt_add_multicast(sock, 'ff02::1')
 	sock.bind(addr)
 	if not udp:
