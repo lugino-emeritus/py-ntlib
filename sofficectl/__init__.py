@@ -11,12 +11,18 @@ from typing import Any
 from .. import imp as ntimp
 from ..fctthread import start_app
 
-__version__ = '0.2.1'
+__version__ = '0.2.2'
 
 _START_CMD, _PORT = ntimp.load_config('sofficectl')
 
 class PyUnoType:
-	def __getattr__(self, a: str) -> Any:
+	def __getattr__(self, a) -> Any:
+		raise RuntimeError('this is only an abstract type')
+	def __setattr__(self, a, v) -> None:
+		raise RuntimeError('this is only an abstract type')
+	def __getitem__(self, a) -> Any:
+		raise RuntimeError('this is only an abstract type')
+	def __setitem__(self, a, v) -> None:
 		raise RuntimeError('this is only an abstract type')
 
 #-------------------------------------------------------

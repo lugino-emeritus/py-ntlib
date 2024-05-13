@@ -13,7 +13,7 @@ def _get_sheet_cell(sheet: PyUnoType, cell_id: CellIdType) -> PyUnoType:
 	return sheet.getCellRangeByName(cell_id) if isinstance(cell_id, str) else \
 		sheet.getCellByPosition(cell_id[1], cell_id[0])
 
-def get_data_array(sheet: PyUnoType, start_cell: CellIdType, end_cell: CellIdType) -> PyUnoType:
+def get_data_array(sheet: PyUnoType, start_cell: CellIdType, end_cell: CellIdType) -> tuple[tuple[Any,...],...]:
 	return sheet.getCellRangeByName(start_cell + ':' + end_cell).DataArray if isinstance(start_cell, str) else \
 		sheet.getCellRangeByPosition(start_cell[1], start_cell[0], end_cell[1], end_cell[0]).DataArray
 
