@@ -3,10 +3,13 @@
 import logging
 import threading
 import time
+from collections.abc import Callable, Hashable
 from heapq import heappop, heappush
+from typing import Any
+Self = Any  #  TODO: use typing.Self from 2025
 from .fctthread import ThreadLoop
 
-__version__ = '0.1.5'
+__version__ = '0.1.6'
 
 logger = logging.getLogger(__name__)
 
@@ -14,10 +17,10 @@ logger = logging.getLogger(__name__)
 
 class _HeapKey:
 	# tuples does not work since timestamps may be identical and keys not sortable
-	def __init__(self, ts, key):
+	def __init__(self, ts: float, key: Hashable):
 		self.ts = ts
 		self.key = key
-	def __lt__(self, other):
+	def __lt__(self, other: Self) -> bool:
 		return self.ts < other.ts
 
 
@@ -29,7 +32,7 @@ class RptSched:
 
 	RptSched.jobs is a dictionary of all job keys and their options.
 	"""
-	def __init__(self, target):
+	def __init__(self, target: Callable[[Hashable, Any], float|None]):
 		"""Callback function dt = target(key, opt).
 
 		key, opt: params defined in add_job
@@ -42,7 +45,7 @@ class RptSched:
 		self._job_update = threading.Condition(self._lock)
 		self.loop_ctl = ThreadLoop(self._loop)
 
-	def _loop(self):
+	def _loop(self) -> bool|None:
 		with self._lock:
 			if not (self.jobs and self._heap):
 				logger.log(logging.WARNING if self.jobs else logging.DEBUG,
@@ -80,7 +83,7 @@ class RptSched:
 		if (delay := now - (ts + dt)) >= 1.0:
 			logger.warning('RptSched loop %.1fs too slow, job: %s, heapsize: %d', delay, key, len(self._heap))
 
-	def add_job(self, key=None, opt=None, *, delay=10.0):
+	def add_job(self, key: Hashable = None, opt: Any = None, *, delay: float = 10.0) -> Hashable:
 		if key is None:
 			if opt is None:
 				raise TypeError("missing 'key' or 'opt' argument")
@@ -96,12 +99,12 @@ class RptSched:
 		self.loop_ctl.start()
 		return key
 
-	def remove_job(self, key):
+	def remove_job(self, key: Hashable) -> None:
 		with self._lock:
 			del self.jobs[key]
 			self._job_update.notify()
 
-	def clear_jobs(self):
+	def clear_jobs(self) -> None:
 		"""Remove all jobs and stop scheduler."""
 		with self._lock:
 			self.jobs.clear()
@@ -111,11 +114,11 @@ class RptSched:
 
 glob_sched = None
 
-def _call_dt(key, opt):
+def _call_dt(key: Callable[[], Any], opt: float|None) -> float|None:
 	r = key()
 	return r if opt is None else opt
 
-def add_job(cb, dt=None, *, delay=None):
+def add_job(cb: Callable[[], Any], dt: float|None = None, *, delay: float|None = None) -> Hashable:
 	"""Add callback job to global scheduler.
 	If dt is None the returned value of cb is used as dt.
 	"""
@@ -129,6 +132,6 @@ def add_job(cb, dt=None, *, delay=None):
 		logger.info('global scheduler initialized')
 	return glob_sched.add_job(cb, dt, delay=delay)
 
-def remove_job(cb):
+def remove_job(cb: Callable[[], Any]):
 	"""Remove a global callback job."""
 	glob_sched.remove_job(cb)

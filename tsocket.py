@@ -4,8 +4,11 @@ import select
 import socket
 import sys
 import time
+from collections.abc import Sequence
+from typing import Any
+Self = Any  #  TODO: use typing.Self from 2025
 
-__version__ = '0.2.20'
+__version__ = '0.2.21'
 
 _TIMEOUT_MAX = 30.0  # used for udp or waiting for messages
 _TIMEOUT_TCP = 2.0  # timeout for connected tcp socket
@@ -14,10 +17,12 @@ HAS_IPV6 = socket.has_ipv6
 Timeout = socket.timeout
 GAIError = socket.gaierror
 
+IpAddrType = tuple[str, int] | tuple[str, int, int, int]
+
 #-------------------------------------------------------
 
 class _EnsureTimeout:
-	def __init__(self, sock):
+	def __init__(self, sock: socket.socket):
 		self.sock = sock
 		self.active = False
 	def __enter__(self):
@@ -31,15 +36,13 @@ class _EnsureTimeout:
 
 
 class Socket(socket.socket):
-	def __init__(self, sock=None, *, ipv6=False, udp=False, timeout=None):
+	def __init__(self, sock: socket.socket|None = None, *,
+			ipv6: bool = False, udp: bool = False, timeout: float|None = None):
 		"""Create a (tcp) socket with timeout.
 
 		If sock is already a socket a tsocket.Socket will be generated. The origin socket will be closed.
-		If sock is an address tuple it will bind to that and set the ip version.
 		"""
 		if sock:
-			if not isinstance(sock, socket.socket):
-				raise TypeError('sock must be socket.socket or None')
 			super().__init__(sock.family, sock.type, sock.proto, fileno=sock.detach())
 			super().settimeout(timeout or sock.gettimeout())
 		else:
@@ -49,29 +52,29 @@ class Socket(socket.socket):
 		self._ensure_timeout = _EnsureTimeout(self)
 		self.maxtimeout = _TIMEOUT_MAX
 
-	def is_ipv6(self):
+	def is_ipv6(self) -> bool:
 		return self.family == socket.AF_INET6
 
-	def get_addrlst(self, hostaddr):
+	def get_addrlst(self, hostaddr: IpAddrType) -> list[IpAddrType]:
 		return get_ipv6_addrlst(hostaddr, self.is_ipv6())[1]
 
-	def accept(self):
+	def accept(self) -> tuple[Self, IpAddrType]:
 		"""Return (tsocket.Socket, addr)."""
 		(sock, addr) = super().accept()
 		return self.__class__(sock, timeout=self.timeout), addr
-	def taccept(self, timeout=_TIMEOUT_TCP):
+	def taccept(self, timeout: float|None = _TIMEOUT_TCP) -> tuple[Self, IpAddrType]:
 		"""Same as accept, but also sets a different timeout."""
 		(sock, addr) = super().accept()
 		return self.__class__(sock, timeout=timeout), addr
 
-	def data_available(self, timeout=None):
+	def data_available(self, timeout: float|None = None):
 		return select.select((self,), (), (), timeout or self.maxtimeout)[0]
 
-	def ensure_timeout(self):
+	def ensure_timeout(self) -> _EnsureTimeout:
 		return self._ensure_timeout
 
 
-	def tsend(self, data):
+	def tsend(self, data: bytes) -> None:
 		"""Send all data within maxtimeout."""
 		t_max = time.monotonic() + self.maxtimeout
 		tosend = len(data)
@@ -83,7 +86,7 @@ class Socket(socket.socket):
 			if t_max < time.monotonic():
 				raise Timeout(f'tsend maxtimeout, not sent: {tosend} bytes')
 
-	def send_list(self, lst):
+	def send_list(self, lst: Sequence[bytes]) -> int:
 		totalen = sum(map(len, lst))
 		if totalen < 2**16:
 			self.sendall(b''.join(lst))
@@ -100,7 +103,7 @@ class Socket(socket.socket):
 					tosend -= self.send(data[-tosend:])
 		return totalen
 
-	def recv_exactly(self, size):
+	def recv_exactly(self, size: int) -> bytes:
 		t_max = time.monotonic() + self.maxtimeout
 		lst = []
 		while data := self.recv(size):
@@ -112,7 +115,7 @@ class Socket(socket.socket):
 				raise Timeout('maxtimeout')
 		return b''
 
-	def recv_until(self, maxlen=2**16, end_char=b'\n'):
+	def recv_until(self, maxlen: int = 2**16, end_char: bytes = b'\n') -> bytes:
 		"""Receive all bytes until end_char, not usable with udp."""
 		t_max = time.monotonic() + self.maxtimeout
 		data = bytearray()
@@ -127,7 +130,7 @@ class Socket(socket.socket):
 			data.extend(c)
 		raise ValueError(f'end character not found within {len(data)} bytes')
 
-	def clear_buffer(self, timeout=1.0, *, esc_data=None):
+	def clear_buffer(self, timeout: float = 1.0, *, esc_data: bytes|None = None) -> bool:
 		"""Clear input buffer of socket.
 
 		Returns True if a timeout occurs,
@@ -154,16 +157,16 @@ class Socket(socket.socket):
 
 #-------------------------------------------------------
 
-def sopt_ipv6only(sock, v6only):
+def sopt_ipv6only(sock, v6only: bool) -> None:
 	sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1 if v6only else 0)
 
-def sopt_reuseaddr(sock, enable):
+def sopt_reuseaddr(sock, enable: bool) -> None:
 	sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1 if enable else 0)
 
-def sopt_broadcast(sock, enable):
+def sopt_broadcast(sock, enable: bool) -> None:
 	sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1 if enable else 0)
 
-def sopt_add_multicast(sock, ip):
+def sopt_add_multicast(sock, ip: str) -> None:
 	if sock.is_ipv6():
 		sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_JOIN_GROUP,
 			socket.inet_pton(socket.AF_INET6, ip) + b'\x00'*4)
@@ -172,11 +175,11 @@ def sopt_add_multicast(sock, ip):
 			socket.inet_pton(socket.AF_INET, ip) + b'\x00'*4)
 
 
-def is_ipv6_addr(addr):
+def is_ipv6_addr(addr: IpAddrType) -> tuple[bool, IpAddrType]:
 	(fam, _, _, _, addr) = socket.getaddrinfo(addr[0], addr[1])[0]
 	return fam == socket.AF_INET6, addr
 
-def find_free_addr(*args, udp=False):
+def find_free_addr(*args, udp: bool = False) -> IpAddrType|None:
 	"""Get a free ipv6 or ipv4 address.
 
 	First argument must be an address (ip, port) tuple,
@@ -198,7 +201,7 @@ def find_free_addr(*args, udp=False):
 				pass
 	return None
 
-def get_ipv6_addrlst(hostaddr, ipv6=None):
+def get_ipv6_addrlst(hostaddr: IpAddrType, ipv6: bool|None = None) -> tuple[bool, list[IpAddrType]]:
 	lst = []
 	af = None if ipv6 is None else socket.AF_INET6 if ipv6 else socket.AF_INET
 	for (fam, _, _, _, addr) in socket.getaddrinfo(hostaddr[0], hostaddr[1]):
@@ -217,7 +220,7 @@ def get_ipv6_addrlst(hostaddr, ipv6=None):
 		raise GAIError(f'no ip address found for {hostaddr}')
 	return af == socket.AF_INET6, lst
 
-def broadcast_addrs(port, ipv6=False):
+def broadcast_addrs(port: int, ipv6: bool = False) -> tuple[IpAddrType, ...]:
 	"""Return broadcast addresses to a given port.
 
 	ipv4: only ip '255.255.255.255',
@@ -227,12 +230,14 @@ def broadcast_addrs(port, ipv6=False):
 		if ipv6 else (('255.255.255.255', port),)
 
 
-def create_connection(hostaddr, timeout=_TIMEOUT_MAX, bindaddr=None):
+def create_connection(hostaddr: tuple[str, int],
+		timeout: float = _TIMEOUT_MAX, bindaddr: IpAddrType|None = None) -> Socket:
 	"""Connect to a TCP address and return the socket."""
 	sock = socket.create_connection(hostaddr, timeout, bindaddr)
 	return Socket(sock, timeout=_TIMEOUT_TCP)
 
-def create_serversock(addr=('', 0), *, ipv6=None, udp=False, reuseaddr=None):
+def create_serversock(addr: IpAddrType = ('', 0), *,
+		ipv6: bool|None = None, udp: bool = False, reuseaddr: bool|None = None) -> Socket:
 	"""Create socket binded to addr.
 
 	If ipv6 is None the socket will listen on IPv4 and v6 if possible.

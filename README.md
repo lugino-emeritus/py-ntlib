@@ -118,5 +118,5 @@ print(sheet.get_array('A1', 'B3'))
 
 `to_dtime` and `from_dtime` converts office time values to `datetime`.
 
-**New in 0.2.0:**
-Module connect.py moved to __init__, use connect instead of connect_to.
+**New:**
+type hints

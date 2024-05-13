@@ -6,33 +6,35 @@ import queue
 import subprocess
 import sys
 import threading
+from collections.abc import Callable, Sequence
+from typing import Any
 
-__version__ = '0.2.21'
+__version__ = '0.2.22'
 
 logger = logging.getLogger(__name__)
 
 #-------------------------------------------------------
 
-def _popen_ext(cmd, shell=False):
+_ENCODING = 'utf-8'
+
+def _popen_ext(cmd: str|Sequence[str], shell=False):
 	subprocess.Popen(cmd, shell=shell, start_new_session=True,
 		stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-_ENCODING = 'utf-8'
-
 if sys.platform.startswith('linux'):
-	def _start_file(cmd):
+	def _start_file(cmd: str) -> None:
 		_popen_ext(('xdg-open', cmd))
 elif sys.platform.startswith('win'):
 	_ENCODING = 'cp850'
-	def _start_file(cmd):
+	def _start_file(cmd: str) -> None:
 		os.startfile(cmd)
 else:
 	logger.warning('fctthread not fully supported on %s', sys.platform)
-	def _start_file(cmd):
+	def _start_file(cmd: str) -> None:
 		raise NotImplementedError(f'_start_file not implemented on {sys.platform}')
 
 
-def shell_cmd(cmd):
+def shell_cmd(cmd: str|Sequence[str]) -> str:
 	"""Execute command and return stdout.
 
 	- cmd can be a string or a iterable containing args: (exe, arg1, ...)
@@ -41,7 +43,7 @@ def shell_cmd(cmd):
 	return subprocess.run(cmd, shell=isinstance(cmd, str), encoding=_ENCODING, errors='replace',
 		stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
 
-def start_app(cmd):
+def start_app(cmd: str|Sequence[str]) -> bool:
 	"""Start application or open file."""
 	try:
 		if not isinstance(cmd, str):
@@ -55,7 +57,7 @@ def start_app(cmd):
 		logger.exception('not possible to start app, cmd: %s', cmd)
 		return False
 
-def start_daemon(target, args=(), kwargs=None):
+def start_daemon(target: Callable, args: list|tuple = (), kwargs: dict|None = None) -> threading.Thread:
 	"""Start and return daemon thread."""
 	t = threading.Thread(target=target, args=args, kwargs=kwargs, daemon=True)
 	t.start()
@@ -64,7 +66,7 @@ def start_daemon(target, args=(), kwargs=None):
 #-------------------------------------------------------
 
 class _FakeThread:
-	def __init__(self, target=None, *, daemon=True, activate=False):
+	def __init__(self, target: Callable|None = None, *, daemon: bool = True, activate: bool = False):
 		self._target = target
 		if not daemon:
 			raise ValueError('FakeThread must be daemonized')
@@ -72,26 +74,25 @@ class _FakeThread:
 		if not activate:
 			self._state.set()
 
-	def run(self):
+	def run(self) -> None:
 		self._state.clear()
 		try:
 			self._target()
 		finally:
 			self._state.set()
 
-	def join(self, timeout=None):
+	def join(self, timeout: float|None = None) -> None:
 		self._state.wait(timeout)
 
-	def is_alive(self):
+	def is_alive(self) -> bool:
 		return not self._state.is_set()
-
 
 class ThreadLoop:
 	"""Class to control function in a daemon thread.
 
 	Loops over target() until calling stop or the target returns True.
 	"""
-	def __init__(self, target):
+	def __init__(self, target: Callable[[], bool|None]):
 		self._target = target
 		self._start_flag = False
 		self._should_run = False
@@ -99,7 +100,7 @@ class ThreadLoop:
 		self._t = _FakeThread()
 		self._lock = threading.Lock()
 
-	def _handle(self):
+	def _handle(self) -> None:
 		logger.debug('ThreadLoop start handle of %s', self._target)
 		while True:
 			try:
@@ -120,7 +121,7 @@ class ThreadLoop:
 					self._stop_flag = True
 					return
 
-	def run(self):
+	def run(self) -> None:
 		"""Run target as loop in the thread of the caller.
 
 		Raise a RuntimeError if loop is already alive.
@@ -134,7 +135,7 @@ class ThreadLoop:
 			self._t = _FakeThread(self._handle, activate=True)
 		self._t.run()
 
-	def start(self):
+	def start(self) -> None:
 		with self._lock:
 			self._start_flag = True
 			if self._stop_flag:
@@ -145,17 +146,17 @@ class ThreadLoop:
 			self._t = threading.Thread(target=self._handle, daemon=True)
 			self._t.start()
 
-	def stop(self, timeout=None):
+	def stop(self, timeout: float|None = None) -> bool:
 		with self._lock:
 			self._start_flag = False
 			self._should_run = False
 		self._t.join(timeout)
 		return not self._t.is_alive()
 
-	def join(self, timeout=None):
+	def join(self, timeout: float|None = None) -> None:
 		self._t.join(timeout)
 
-	def is_alive(self):
+	def is_alive(self) -> bool:
 		return self._t.is_alive()
 
 #-------------------------------------------------------
@@ -165,7 +166,8 @@ class QueueWorker:
 
 	If a thread is not called within timeout seconds it will be stopped.
 	"""
-	def __init__(self, target, maxthreads=2, *, timeout=10.0, qsize=None):
+	def __init__(self, target: Callable[[Any], None],
+			maxthreads: int = 2, *, timeout: float = 10.0, qsize: int|None = None):
 		if maxthreads <= 0:
 			raise ValueError('number of threads must be at least 1')
 		if timeout < 0.0:
@@ -180,7 +182,7 @@ class QueueWorker:
 		self._lock = threading.Lock()
 		self._all_done = threading.Condition(self._lock)
 
-	def _handle(self):
+	def _handle(self) -> None:
 		while True:
 			try:
 				while self._enabled:
@@ -200,19 +202,19 @@ class QueueWorker:
 						self._all_done.notify_all()
 						return
 
-	def _start_thread(self):
+	def _start_thread(self) -> None:
 		assert self._lock.locked()
 		if self._enabled and self._active_loops < self._maxthreads:
 			threading.Thread(target=self._handle, daemon=True).start()
 			self._active_loops += 1
 
-	def put(self, arg, timeout=None):
+	def put(self, arg: Any, timeout: float|None = None) -> None:
 		self._q.put(arg, timeout=timeout)
 		with self._lock:
 			if self._active_loops < self._q.unfinished_tasks:
 				self._start_thread()
 
-	def start(self):
+	def start(self) -> None:
 		with self._lock:
 			if self._enabled:
 				return
@@ -220,20 +222,20 @@ class QueueWorker:
 			for _ in range(self._q.qsize()):
 				self._start_thread()
 
-	def stop(self, timeout=None):
+	def stop(self, timeout: float|None = None) -> bool:
 		with self._lock:
 			self._enabled = False
 		self.join(timeout)
 		return not self._active_loops
 
-	def join(self, timeout=None):
+	def join(self, timeout: float|None = None) -> None:
 		with self._all_done:
 			self._all_done.wait_for(lambda: self._active_loops<=0, timeout)
 
-	def is_alive(self):
+	def is_alive(self) -> bool:
 		return self._enabled or self._active_loops > 0
 
-	def info(self):
+	def info(self) -> dict[str, Any]:
 		return {'enabled': self._enabled, 'loops': self._active_loops,
 			'unfinished': self._q.unfinished_tasks, 'waiting': self._q.qsize()}
 
@@ -244,7 +246,7 @@ class CmpEvent:
 	This data is accessible in the variable result.
 	An optional answer can be sent to the compare thread.
 	"""
-	def __init__(self, cmpfct=lambda x,y: x==y):
+	def __init__(self, cmpfct: Callable[[Any, Any], bool] = lambda x,y: x==y):
 		"""Init method accepts an alternative boolean compare function:
 		cmpfct(init_value, compare_value), equality check (==) by default.
 		"""
@@ -255,19 +257,19 @@ class CmpEvent:
 		self._waiting = False
 		self._cond = threading.Condition(threading.Lock())
 
-	def init(self, cmpval, answer=True):
+	def init(self, cmpval: Any, answer: Any) -> None:
 		with self._cond:
 			self.result = None
 			self._cmpval = cmpval
 			self._answer = answer
 			self._waiting = True
 
-	def wait(self, timeout=None):
+	def wait(self, timeout: float|None = None) -> bool:
 		"""Return False while waiting for a match, True otherwise."""
 		with self._cond:
 			return self._cond.wait(timeout) if self._waiting else True
 
-	def compare(self, cmpval, result):
+	def compare(self, cmpval: Any, result: Any) -> Any:
 		if self._waiting:
 			with self._cond:
 				if self._cmpfct(self._cmpval, cmpval):

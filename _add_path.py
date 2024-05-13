@@ -1,9 +1,9 @@
-"""Add ntlib dir or given path to sys.path (mylibs.pth in site-packages)."""
+"""Add ntlib directory or given path to sys.path (mylibs.pth in site-packages)."""
 
 import os
 import sys
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 if __name__ != '__main__':
 	raise ImportError('this file must be executed directly')
@@ -30,7 +30,7 @@ if not os.path.isdir(pth):
 print(f'add location {pth}')
 
 
-def update_pth(filename):
+def update_pth(filename: str) -> None:
 	newline = False
 	if os.path.exists(filename):
 		with open(filename, 'r') as f:

@@ -11,11 +11,12 @@ jump t seconds, t can be negative
 import logging
 import sys
 import time
+from typing import Any
 from .. import imp as ntimp
 from .. import tsocket
 from ..fctthread import start_app
 
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 
 logger = logging.getLogger(__name__)
 
@@ -27,23 +28,23 @@ class VideoLan():
 	def __init__(self):
 		self.sock = None
 
-	def _init_sock(self, addr):
+	def _init_sock(self, addr: tuple[str, int]) -> None:
 		self.sock = tsocket.create_connection(addr, timeout=0.1)
 		self.sock.settimeout(0.01)
 
-	def _close_sock(self):
+	def _close_sock(self) -> None:
 		if self.sock:
 			self.sock.close()
 		self.sock = None
 
 	if sys.platform.startswith('win'):
-		def _clear_buffer(self):
+		def _clear_buffer(self) -> None:
 			self.sock.clear_buffer(0.01, esc_data=b'\n')
 	else:
-		def _clear_buffer(self):
+		def _clear_buffer(self) -> None:
 			self.sock.clear_buffer(0.01)
 
-	def recv_lines(self, max_lines=10):
+	def recv_lines(self, max_lines: int = 10) -> list[str]:
 		lines = []
 		try:
 			for _ in range(max_lines):
@@ -55,15 +56,15 @@ class VideoLan():
 			pass
 		return lines
 
-	def _cmd(self, cmd):
+	def _cmd(self, cmd: str) -> None:
 		self.sock.send(cmd.encode() + b'\n')
 
-	def cmd(self, cmd):
+	def cmd(self, cmd: str) -> list[str]:
 		self._clear_buffer()
 		self._cmd(cmd)
 		return self.recv_lines()
 
-	def online_check(self):
+	def online_check(self) -> bool:
 		if self.sock is None:
 			return False
 		try:
@@ -74,7 +75,7 @@ class VideoLan():
 		self._close_sock()
 		return False
 
-	def start(self):
+	def start(self) -> None:
 		if self.online_check():
 			return
 		try:
@@ -90,7 +91,7 @@ class VideoLan():
 		logger.log(logging.INFO if addr[1]==_PREF_PORT else logging.WARNING, 'vlc using addr %s', addr)
 
 		err = None
-		for i in range(10):
+		for _ in range(10):
 			time.sleep(1)
 			try:
 				self._init_sock(addr)
@@ -100,7 +101,7 @@ class VideoLan():
 				err = e
 		raise ConnectionError(f'connection to vlc failed: {err!r}')
 
-	def exit(self):
+	def exit(self) -> None:
 		if self.sock is None:
 			return
 		try:
@@ -111,7 +112,7 @@ class VideoLan():
 		finally:
 			self._close_sock()
 
-	def jump(self, dt):
+	def jump(self, dt: float) -> None:
 		self._clear_buffer()
 		self._cmd('get_time')
 		t = int(self.recv_lines(1)[0])
@@ -133,7 +134,7 @@ _DEFAULT_CMDS = {
 	'mute': 'volume 0'
 }
 
-def cmd(cmd, param=None):
+def cmd(cmd: str, param: Any = None) -> None:
 	if c := _DEFAULT_CMDS.get(cmd):
 		con.cmd(c)
 		return

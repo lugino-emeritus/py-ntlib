@@ -4,15 +4,18 @@ import importlib as _il
 import logging
 import os.path as _osp
 import sys
+from types import ModuleType
+from typing import Any
 
-__version__ = '0.2.13'
+__version__ = '0.2.14'
 
 _confpath = None
 _aliases = None
 
 #-------------------------------------------------------
 
-def config_log(level='INFO', fmt='', *, force=True, rotfile=None, addstd=False):
+def config_log(level: int|str = 'INFO', fmt: str = '', *,
+		force: bool = True, rotfile: str|None = None, addstd: bool = False) -> None:
 	"""Configurate logging format to 'Level(time): [fmt] message'.
 
 	Args:
@@ -37,7 +40,7 @@ def config_log(level='INFO', fmt='', *, force=True, rotfile=None, addstd=False):
 	logging.basicConfig(format=fmt, level=level, force=force, handlers=handlers)
 
 
-def init_confpath(p=None, *, force=False):
+def init_confpath(p: str|None = None, *, force: bool = False) -> None:
 	global _confpath, _confload
 	if _confpath is None:
 		from json import load as _confload
@@ -47,7 +50,8 @@ def init_confpath(p=None, *, force=False):
 		raise RuntimeError(f'confpath ({_confpath}) already defined')
 	_confpath = _osp.abspath(p)
 
-def load_config(name):
+def load_config(name: str) -> Any:
+	global _confpath
 	if _confpath is None:
 		init_confpath()
 	with open(_confpath) as f:
@@ -56,7 +60,7 @@ def load_config(name):
 #-------------------------------------------------------
 
 class _EnsureSysPath:
-	def __init__(self, path):
+	def __init__(self, path: str):
 		self.path = _osp.abspath(path)
 	def __enter__(self):
 		sys.path.insert(0, self.path)
@@ -64,7 +68,7 @@ class _EnsureSysPath:
 		sys.path.remove(self.path)
 
 
-def import_path(modulename, path='.'):
+def import_path(modulename: str, path: str = '.') -> ModuleType:
 	"""Import module from a given path, defaults to CWD."""
 	path = _osp.abspath(path)
 	if not _osp.isdir(path):
@@ -72,7 +76,7 @@ def import_path(modulename, path='.'):
 	with _EnsureSysPath(_osp.abspath(path)):
 		return _il.import_module(modulename)
 
-def import_alias(alias, modulename):
+def import_alias(alias: str, modulename: str) -> ModuleType:
 	"""Import module from an alias path defined in the config.json file."""
 	global _aliases
 	if _aliases is None:
@@ -82,7 +86,7 @@ def import_alias(alias, modulename):
 		modulename = '.'.join((tail, modulename))
 	return import_path(modulename, path)
 
-def reload(module):
+def reload(module: ModuleType) -> ModuleType:
 	"""Reload the given module, but not its submodules."""
 	path, ext = _osp.splitext(module.__file__)
 	if ext != '.py':

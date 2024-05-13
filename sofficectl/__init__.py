@@ -7,17 +7,21 @@ import os
 import sys
 import time
 import uno
-
+from typing import Any
 from .. import imp as ntimp
 from ..fctthread import start_app
 
-__version__ = '0.2.0'
+__version__ = '0.2.1'
 
 _START_CMD, _PORT = ntimp.load_config('sofficectl')
 
+class PyUnoType:
+	def __getattr__(self, a: str) -> Any:
+		raise RuntimeError('this is only an abstract type')
+
 #-------------------------------------------------------
 
-def _init_ctx():
+def _init_ctx() -> PyUnoType:
 	lctx = uno.getComponentContext()  # local context
 	resolver = lctx.ServiceManager.createInstanceWithContext('com.sun.star.bridge.UnoUrlResolver', lctx)
 	resolve_param = f'uno:socket,host=localhost,port={_PORT};urp;StarOffice.ComponentContext'
@@ -36,32 +40,12 @@ def _init_ctx():
 			raise err from None
 	return ctx.ServiceManager.createInstanceWithContext('com.sun.star.frame.Desktop', ctx)
 
-def _norm_filepath(path):
+def _norm_filepath(path: str) -> str:
 	if path.startswith('file:///'):
 		path = path[(8 if sys.platform.startswith('win') else 7):]
 	return os.path.normpath(path)
 
-def _find_doc_old(ctx, title, path):
-	res = set()
-	for m in ctx.Components:
-		if m_path := getattr(m, 'Location', None):
-			m_path = _norm_filepath(m_path)
-			if path == m_path:
-				return m
-			elif path.lower() in m_path.lower():
-				res.add(m)
-		if m_title := getattr(m, 'Title', None):
-			if title == m_title:
-				return m
-			elif title.lower() in m_title.lower():
-				res.add(m)
-	if res:
-		if len(res) == 1:
-			return res.pop()
-		raise ValueError(f'title {title}, path {path} not unique')
-	return None
-
-def _find_doc(ctx, query, title, path):
+def _find_doc(ctx: PyUnoType, title: str, path: str|None, query: str|None) -> PyUnoType|None:
 	# make sure to init str query with query.lower()
 	title_set = set()
 	query_set = set()
@@ -89,7 +73,7 @@ def _find_doc(ctx, query, title, path):
 
 #-------------------------------------------------------
 
-def connect(query=''):
+def connect(query: str = '') -> PyUnoType:
 	ctx = _init_ctx()
 	path = os.path.abspath(query)
 	if os.path.isfile(path):
@@ -97,7 +81,7 @@ def connect(query=''):
 	else:
 		iquery = query.lower()
 		path = None
-	if model := _find_doc(ctx, iquery, query, path):
+	if model := _find_doc(ctx, query, path, iquery):
 		return model
 	if not path:
 		raise ValueError(f'no document found for query {query}')
@@ -112,7 +96,7 @@ def connect(query=''):
 	raise ConnectionError('not possible to connect to existing file')
 
 
-def get_model_attributes(model):
+def get_model_attributes(model) -> dict[Any, list[str]]:
 	keys = {}
 	for x in model.__dir__():
 		try:
