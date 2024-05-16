@@ -5,7 +5,7 @@ from . import *
 
 __version__ = '0.1.11'
 
-CellIdType = str|tuple[int, int]
+CellIdType = str | tuple[int, int]
 
 #-------------------------------------------------------
 

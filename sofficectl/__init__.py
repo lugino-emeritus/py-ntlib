@@ -7,23 +7,15 @@ import os
 import sys
 import time
 import uno
-from typing import Any
+from typing import Any, NewType
 from .. import imp as ntimp
 from ..fctthread import start_app
 
-__version__ = '0.2.2'
+__version__ = '0.2.3'
 
 _START_CMD, _PORT = ntimp.load_config('sofficectl')
 
-class PyUnoType:
-	def __getattr__(self, a) -> Any:
-		raise RuntimeError('this is only an abstract type')
-	def __setattr__(self, a, v) -> None:
-		raise RuntimeError('this is only an abstract type')
-	def __getitem__(self, a) -> Any:
-		raise RuntimeError('this is only an abstract type')
-	def __setitem__(self, a, v) -> None:
-		raise RuntimeError('this is only an abstract type')
+PyUnoType = NewType('PyUnoType', Any)
 
 #-------------------------------------------------------
 

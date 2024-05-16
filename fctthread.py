@@ -9,7 +9,7 @@ import threading
 from collections.abc import Callable, Sequence
 from typing import Any
 
-__version__ = '0.2.22'
+__version__ = '0.2.23'
 
 logger = logging.getLogger(__name__)
 
@@ -257,7 +257,7 @@ class CmpEvent:
 		self._waiting = False
 		self._cond = threading.Condition(threading.Lock())
 
-	def init(self, cmpval: Any, answer: Any) -> None:
+	def init(self, cmpval: Any, answer: Any = True) -> None:
 		with self._cond:
 			self.result = None
 			self._cmpval = cmpval
