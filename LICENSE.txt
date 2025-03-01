@@ -1,6 +1,6 @@
 BSD 3-Clause License
 
-Copyright (c) 2022, lugino-emeritus
+Copyright (c) 2022-2025, lugino-emeritus
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without

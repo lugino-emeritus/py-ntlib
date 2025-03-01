@@ -6,9 +6,9 @@ import sys
 import time
 from collections.abc import Sequence
 from typing import Any
-Self = Any  #  TODO: use typing.Self from 2025
+Self = Any  # TODO: use typing.Self from mid 2026
 
-__version__ = '0.2.21'
+__version__ = '0.2.22'
 
 _TIMEOUT_MAX = 30.0  # used for udp or waiting for messages
 _TIMEOUT_TCP = 2.0  # timeout for connected tcp socket
@@ -223,11 +223,12 @@ def get_ipv6_addrlst(hostaddr: IpAddrType, ipv6: bool|None = None) -> tuple[bool
 def broadcast_addrs(port: int, ipv6: bool = False) -> tuple[IpAddrType, ...]:
 	"""Return broadcast addresses to a given port.
 
-	ipv4: only ip '255.255.255.255',
-	ipv6: 'ff02::1' and '::ffff:255.255.255.255'
+	ipv4: '255.255.255.255' and localhost as fallback
+	ipv6: 'ff02::1', '::ffff:255.255.255.255' and localhost
+	localhost fallback seems necessary in Linux if no network is reachable
 	"""
-	return (('ff02::1', port), ('::ffff:255.255.255.255', port)) \
-		if ipv6 else (('255.255.255.255', port),)
+	return (('ff02::1', port), ('::ffff:255.255.255.255', port), ('::1', port)) \
+		if ipv6 else (('255.255.255.255', port), ('127.0.0.1', port))
 
 
 def create_connection(hostaddr: tuple[str, int],
@@ -241,8 +242,8 @@ def create_serversock(addr: IpAddrType = ('', 0), *,
 	"""Create socket binded to addr.
 
 	If ipv6 is None the socket will listen on IPv4 and v6 if possible.
-	On UDP broadcast support is enabled,
-	TCP listens for new connections.
+	On UDP broadcast support is enabled;
+	TCP socket listen on new connections.
 	"""
 	if ipv6 is None:
 		ipv6 = is_ipv6_addr(addr)[0] if addr[0] else HAS_IPV6

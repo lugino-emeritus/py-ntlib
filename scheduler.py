@@ -6,7 +6,7 @@ import time
 from collections.abc import Callable, Hashable
 from heapq import heappop, heappush
 from typing import Any
-Self = Any  #  TODO: use typing.Self from 2025
+Self = Any  # TODO: use typing.Self from 2025
 from .fctthread import ThreadLoop
 
 __version__ = '0.1.6'

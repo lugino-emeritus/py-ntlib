@@ -7,11 +7,12 @@ import os
 import sys
 import time
 import uno
+from com.sun.star.beans import PropertyValue  # requires module uno
 from typing import Any, NewType
 from .. import imp as ntimp
 from ..fctthread import start_app
 
-__version__ = '0.2.3'
+__version__ = '0.2.4'
 
 _START_CMD, _PORT = ntimp.load_config('sofficectl')
 
@@ -42,6 +43,12 @@ def _norm_filepath(path: str) -> str:
 	if path.startswith('file:///'):
 		path = path[(8 if sys.platform.startswith('win') else 7):]
 	return os.path.normpath(path)
+
+def _extend_filepath(path: str) -> str:
+	if not path.startswith('file:///'):
+		pre = 'file:///' if sys.platform.startswith('win') else 'file://'
+		return pre + os.path.abspath(path)
+	return path
 
 def _find_doc(ctx: PyUnoType, title: str, path: str|None, query: str|None) -> PyUnoType|None:
 	# make sure to init str query with query.lower()

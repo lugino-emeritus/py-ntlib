@@ -2,8 +2,9 @@ import datetime
 from types import CellType
 from typing import Any
 from . import *
+from . import _norm_filepath, _extend_filepath
 
-__version__ = '0.1.11'
+__version__ = '0.1.12'
 
 CellIdType = str | tuple[int, int]
 
@@ -21,6 +22,9 @@ def get_data_array(sheet: PyUnoType, start_cell: CellIdType, end_cell: CellIdTyp
 class MiniSheet:
 	def __init__(self, sheet: PyUnoType):
 		self.sheet = sheet
+
+	def __str__(self):
+		return f'<MiniSheet {self.sheet.Name}>'
 
 	def get_data(self, cell_id: CellIdType) -> Any:
 		return _get_sheet_cell(self.sheet, cell_id).DataArray[0][0]
@@ -44,6 +48,21 @@ class MiniSheet:
 def get_msheet_dic(model: PyUnoType) -> dict[str, MiniSheet]:
 	return {s.Name: MiniSheet(s) for s in model.Sheets}
 
+
+def export_pdf(model: PyUnoType, *, refresh: bool = False, path: str|None = None) -> str:
+	if refresh:
+		model.calculateAll()
+	if not path:
+		if (path := model.Location):
+			path = os.path.splitext(path)[0] + '.pdf'
+		else:
+			raise ValueError('pdf export not possible, no file name found')
+	else:
+		path = _extend_filepath(path)
+	args = (PropertyValue('FilterName', 0, 'calc_pdf_Export', 0),)
+	model.storeToURL(path, args)
+	return _norm_filepath(path)
+
 #-------------------------------------------------------
 
 def data_to_str(data: Any) -> str:
@@ -55,9 +74,10 @@ def data_to_str(data: Any) -> str:
 			data = z
 	return str(data)
 
-_DAY0 = datetime.datetime(1899,12,30)
+_DAY0 = datetime.datetime(1899, 12, 30, 0, 0, 0)
 def to_dtime(tday: float) -> datetime.datetime:
-	return _DAY0 + datetime.timedelta(days=tday)
+	# round to seconds
+	return _DAY0 + datetime.timedelta(seconds=round(86400.0 * tday))
 def from_dtime(tval: datetime.datetime) -> float:
 	return (tval-_DAY0).total_seconds() / 86400.0
 
