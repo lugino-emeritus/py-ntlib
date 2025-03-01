@@ -1,10 +1,9 @@
 import datetime
-from types import CellType
 from typing import Any
 from . import *
 from . import _norm_filepath, _extend_filepath
 
-__version__ = '0.1.12'
+__version__ = '0.1.13'
 
 CellIdType = str | tuple[int, int]
 
@@ -39,9 +38,9 @@ class MiniSheet:
 	def get_array(self, start_cell: CellIdType, end_cell: CellIdType) -> tuple[tuple[Any,...],...]:
 		return get_data_array(self.sheet, start_cell, end_cell)
 
-	def __getitem__(self, idx: CellType) -> Any:
+	def __getitem__(self, idx: CellIdType) -> Any:
 		return self.sheet[idx].DataArray[0][0]
-	def __setitem__(self, idx: CellType, val: Any) -> None:
+	def __setitem__(self, idx: CellIdType, val: Any) -> None:
 		self.sheet[idx].DataArray = ((val,),)
 
 
