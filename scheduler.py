@@ -132,6 +132,6 @@ def add_job(cb: Callable[[], Any], dt: float|None = None, *, delay: float|None =
 		logger.info('global scheduler initialized')
 	return glob_sched.add_job(cb, dt, delay=delay)
 
-def remove_job(cb: Callable[[], Any]):
+def remove_job(cb: Callable[[], Any]) -> None:
 	"""Remove a global callback job."""
 	glob_sched.remove_job(cb)

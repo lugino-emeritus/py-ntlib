@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 _ENCODING = 'utf-8'
 
-def _popen_ext(cmd: str|Sequence[str], shell=False):
+def _popen_ext(cmd: str|Sequence[str], shell: bool = False):
 	subprocess.Popen(cmd, shell=shell, start_new_session=True,
 		stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
