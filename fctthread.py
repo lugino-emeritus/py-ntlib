@@ -1,4 +1,5 @@
 """Control methods in separate threads."""
+__version__ = '0.2.24'
 
 import logging
 import os
@@ -8,8 +9,6 @@ import sys
 import threading
 from collections.abc import Callable, Sequence
 from typing import Any
-
-__version__ = '0.2.23'
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +65,7 @@ def start_daemon(target: Callable, args: list|tuple = (), kwargs: dict|None = No
 #-------------------------------------------------------
 
 class _FakeThread:
-	def __init__(self, target: Callable|None = None, *, daemon: bool = True, activate: bool = False):
+	def __init__(self, target: Callable[[], Any], *, daemon: bool = True, activate: bool = False):
 		self._target = target
 		if not daemon:
 			raise ValueError('FakeThread must be daemonized')
@@ -97,7 +96,7 @@ class ThreadLoop:
 		self._start_flag = False
 		self._should_run = False
 		self._stop_flag = False
-		self._t = _FakeThread()
+		self._t = _FakeThread(self._handle)
 		self._lock = threading.Lock()
 
 	def _handle(self) -> None:
@@ -251,7 +250,7 @@ class CmpEvent:
 		cmpfct(init_value, compare_value), equality check (==) by default.
 		"""
 		self._cmpfct = cmpfct
-		self.result = None
+		self.result: Any = None
 		self._cmpval = None
 		self._answer = None
 		self._waiting = False

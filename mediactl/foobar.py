@@ -5,13 +5,12 @@ play, pause, next, prev, stop
 volup, voldown, volreset, mute
 start, exit
 """
+__version__ = '0.1.2'
 
 import sys
 from os import path as _osp
 from .. import imp as ntimp
 from ..fctthread import start_app
-
-__version__ = '0.1.2'
 
 def _load_config() -> None:
 	global _ROOT, _QUEUE_PATH

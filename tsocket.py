@@ -1,4 +1,5 @@
 """Socket wrapper with simplified ipv6 and timeout support."""
+__version__ = '0.2.23'
 
 import select
 import socket
@@ -6,9 +7,7 @@ import sys
 import time
 from collections.abc import Sequence
 from typing import Any
-Self = Any  # TODO: use typing.Self from mid 2026
-
-__version__ = '0.2.22'
+Self = Any  # TODO: use typing.Self from 2026
 
 _TIMEOUT_MAX = 30.0  # used for udp or waiting for messages
 _TIMEOUT_TCP = 2.0  # timeout for connected tcp socket
@@ -179,7 +178,7 @@ def is_ipv6_addr(addr: IpAddrType) -> tuple[bool, IpAddrType]:
 	(fam, _, _, _, addr) = socket.getaddrinfo(addr[0], addr[1])[0]
 	return fam == socket.AF_INET6, addr
 
-def find_free_addr(*args, udp: bool = False) -> IpAddrType|None:
+def find_free_addr(addr: IpAddrType, *addrs: IpAddrType|int, udp: bool = False) -> tuple[str, int]:
 	"""Get a free ipv6 or ipv4 address.
 
 	First argument must be an address (ip, port) tuple,
@@ -187,8 +186,8 @@ def find_free_addr(*args, udp: bool = False) -> IpAddrType|None:
 	Port 0 always returs a free port.
 	Set udp=True if no tcp port is needed.
 	"""
-	ip = args[0][0]
-	addrlst = (x if isinstance(x, tuple) else (ip, x) for x in args)
+	addrlst = [addr]
+	addrlst.extend(x if isinstance(x, tuple) else (addr[0], x) for x in addrs)
 	for addr in addrlst:
 		ipv6 = is_ipv6_addr(addr)[0] if addr[0] else HAS_IPV6
 		with Socket(ipv6=ipv6, udp=udp) as sock:
@@ -199,7 +198,7 @@ def find_free_addr(*args, udp: bool = False) -> IpAddrType|None:
 				return (addr[0], sock.getsockname()[1])
 			except OSError:
 				pass
-	return None
+	raise OSError("given addresses not accessible")
 
 def get_ipv6_addrlst(hostaddr: IpAddrType, ipv6: bool|None = None) -> tuple[bool, list[IpAddrType]]:
 	lst = []

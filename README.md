@@ -117,6 +117,3 @@ print(sheet.get_array('A1', 'B3'))
 ```
 
 `to_dtime` and `from_dtime` converts office time values to `datetime`.
-
-**New:**
-type hints

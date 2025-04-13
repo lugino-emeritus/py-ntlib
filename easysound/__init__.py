@@ -1,4 +1,5 @@
 """Playback sounds or check input volume."""
+__version__ = '0.3.3'
 
 import logging
 import numpy as np
@@ -9,8 +10,6 @@ import soundfile as sf
 import threading
 from collections.abc import Callable, Sequence
 from typing import Any
-
-__version__ = '0.3.3'
 
 _DTYPE = 'float32'  # float32 is highly recommended
 _BLOCKTIMEFRAC = 20  # 48000 / 20 = 2400 -> results in blocksize = 4096
@@ -98,7 +97,7 @@ class FilePlayer:
 					return
 			logger.exception('FilePlayer.__del__ failed')
 
-	def _init_stream(self, device: DeviceType, channels: int) -> None:
+	def _init_stream(self, device: DeviceType, channels: int|None) -> None:
 		self._t = threading.Thread(target=self._play, daemon=True)
 		self._stream = sd.OutputStream(
 			samplerate=self._file.samplerate, blocksize=self._blocksize,

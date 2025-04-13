@@ -2,6 +2,7 @@
 
 Base module to connect to a soffice model.
 """
+__version__ = '0.2.4'
 
 import os
 import sys
@@ -11,8 +12,6 @@ from com.sun.star.beans import PropertyValue  # requires module uno
 from typing import Any, NewType
 from .. import imp as ntimp
 from ..fctthread import start_app
-
-__version__ = '0.2.4'
 
 _START_CMD, _PORT = ntimp.load_config('sofficectl')
 

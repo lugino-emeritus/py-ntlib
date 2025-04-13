@@ -1,15 +1,14 @@
 """Scheduler to call methods repeatedly."""
+__version__ = '0.1.7'
 
 import logging
 import threading
 import time
 from collections.abc import Callable, Hashable
 from heapq import heappop, heappush
-from typing import Any
-Self = Any  # TODO: use typing.Self from 2025
+from typing import Any, cast
+Self = Any  # TODO: use typing.Self from 2026
 from .fctthread import ThreadLoop
-
-__version__ = '0.1.6'
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +111,7 @@ class RptSched:
 
 #-------------------------------------------------------
 
-glob_sched = None
+glob_sched = cast(RptSched, None)
 
 def _call_dt(key: Callable[[], Any], opt: float|None) -> float|None:
 	r = key()

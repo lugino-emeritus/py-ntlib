@@ -1,9 +1,10 @@
+"""LibreOffice calc modification tool."""
+__version__ = '0.1.15'
+
 import datetime
 from typing import Any
 from . import *
 from . import _norm_filepath, _extend_filepath
-
-__version__ = '0.1.15'
 
 CellIdType = str | tuple[int, int]
 
@@ -25,7 +26,7 @@ class MiniSheet:
 	def __init__(self, sheet: PyUnoType):
 		self.sheet = sheet
 
-	def __str__(self):
+	def __str__(self) -> str:
 		return f'<MiniSheet {self.sheet.Name}>'
 
 	def get_data(self, cell_id: CellIdType) -> Any:

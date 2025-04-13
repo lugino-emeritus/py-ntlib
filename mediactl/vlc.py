@@ -7,26 +7,25 @@ start, exit
 jumpf, jumpb: jump 10 seconds forward or back
 jump t seconds, t can be negative
 """
+__version__ = '0.1.4'
 
 import logging
 import sys
 import time
-from typing import Any
+from typing import Any, cast
 from .. import imp as ntimp
 from .. import tsocket
 from ..fctthread import start_app
 
-__version__ = '0.1.3'
+_START_CMD, _PREF_PORT = ntimp.load_config('mediactl')['vlc']
 
 logger = logging.getLogger(__name__)
-
-_START_CMD, _PREF_PORT = ntimp.load_config('mediactl')['vlc']
 
 #-------------------------------------------------------
 
 class VideoLan():
 	def __init__(self):
-		self.sock = None
+		self.sock = cast(tsocket.Socket, None)
 
 	def _init_sock(self, addr: tuple[str, int]) -> None:
 		self.sock = tsocket.create_connection(addr, timeout=0.1)
@@ -35,7 +34,7 @@ class VideoLan():
 	def _close_sock(self) -> None:
 		if self.sock:
 			self.sock.close()
-		self.sock = None
+		self.sock = cast(tsocket.Socket, None)
 
 	if sys.platform.startswith('win'):
 		def _clear_buffer(self) -> None:

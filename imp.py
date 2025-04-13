@@ -1,16 +1,15 @@
 """Provide import tools and can set a basic logging format."""
+__version__ = '0.2.15'
 
 import importlib as _il
 import logging
 import os.path as _osp
 import sys
 from types import ModuleType
-from typing import Any
+from typing import Any, cast
 
-__version__ = '0.2.14'
-
-_confpath = None
-_aliases = None
+_confpath = cast(str, None)
+_aliases = cast(dict[str, tuple[str, str]], None)
 
 #-------------------------------------------------------
 

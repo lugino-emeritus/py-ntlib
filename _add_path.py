@@ -1,9 +1,8 @@
 """Add ntlib directory or given path to sys.path (mylibs.pth in site-packages)."""
+__version__ = '0.1.1'
 
 import os
 import sys
-
-__version__ = '0.1.1'
 
 if __name__ != '__main__':
 	raise ImportError('this file must be executed directly')
