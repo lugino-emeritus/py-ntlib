@@ -21,7 +21,7 @@ _START_CMD, _PREF_PORT = ntimp.load_config('mediactl')['vlc']
 
 logger = logging.getLogger(__name__)
 
-#-------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 class VideoLan():
 	def __init__(self):

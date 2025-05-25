@@ -17,7 +17,7 @@ _START_CMD, _PORT = ntimp.load_config('sofficectl')
 
 PyUnoType = NewType('PyUnoType', Any)
 
-#-------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 def _init_ctx() -> PyUnoType:
 	lctx = uno.getComponentContext()  # local context
@@ -75,7 +75,7 @@ def _find_doc(ctx: PyUnoType, title: str, path: str|None, query: str|None) -> Py
 		return None
 	raise ValueError(f'no unique document: query: {query}, title: {title}, path: {path}')
 
-#-------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 def connect(query: str = '') -> PyUnoType:
 	ctx = _init_ctx()

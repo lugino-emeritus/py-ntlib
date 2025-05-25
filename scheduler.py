@@ -12,7 +12,7 @@ from .fctthread import ThreadLoop
 
 logger = logging.getLogger(__name__)
 
-#-------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 class _HeapKey:
 	# tuples does not work since timestamps may be identical and keys not sortable
@@ -109,7 +109,7 @@ class RptSched:
 			self.jobs.clear()
 			self._job_update.notify()
 
-#-------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 glob_sched = cast(RptSched, None)
 

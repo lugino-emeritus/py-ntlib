@@ -27,7 +27,7 @@ def _load_config() -> None:
 
 _load_config()
 
-#-------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 def add_queue(filepath: str, root: tuple[str, ...] =_ROOT) -> None:
 	filepath = filepath.replace('\\', '/')  # to be compatible on linux / windows

@@ -12,7 +12,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-#-------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 _ENCODING = 'utf-8'
 
@@ -62,13 +62,13 @@ def start_daemon(target: Callable, args: list|tuple = (), kwargs: dict|None = No
 	t.start()
 	return t
 
-#-------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 class _FakeThread:
 	def __init__(self, target: Callable[[], Any], *, daemon: bool = True, activate: bool = False):
 		self._target = target
 		if not daemon:
-			raise ValueError('FakeThread must be daemonized')
+			raise ValueError('FakeThread must be a daemon')
 		self._state = threading.Event()
 		if not activate:
 			self._state.set()
@@ -158,7 +158,7 @@ class ThreadLoop:
 	def is_alive(self) -> bool:
 		return self._t.is_alive()
 
-#-------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 class QueueWorker:
 	"""Class to process elements from a queue in separate threads.

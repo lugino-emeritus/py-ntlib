@@ -7,7 +7,7 @@ import sys
 if __name__ != '__main__':
 	raise ImportError('this file must be executed directly')
 
-#-------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 if len(sys.argv) > 1:
 	pth = os.path.abspath(sys.argv[1])

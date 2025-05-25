@@ -8,7 +8,7 @@ from . import _norm_filepath, _extend_filepath
 
 CellIdType = str | tuple[int, int]
 
-#-------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 def _get_sheet_cell(sheet: PyUnoType, cell_id: CellIdType) -> PyUnoType:
 	return sheet.getCellRangeByName(cell_id) if isinstance(cell_id, str) else \
@@ -68,7 +68,7 @@ def export_pdf(model: PyUnoType, *, refresh: bool = False, path: str|None = None
 	model.storeToURL(path, args)
 	return _norm_filepath(path)
 
-#-------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 def data_to_str(data: Any) -> str:
 	if isinstance(data, str):

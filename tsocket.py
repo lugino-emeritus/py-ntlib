@@ -1,4 +1,4 @@
-"""Socket wrapper with simplified ipv6 and timeout support."""
+"""Socket wrapper with simplified IPv6 and timeout support."""
 __version__ = '0.2.23'
 
 import select
@@ -18,7 +18,7 @@ GAIError = socket.gaierror
 
 IpAddrType = tuple[str, int] | tuple[str, int, int, int]
 
-#-------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 class _EnsureTimeout:
 	def __init__(self, sock: socket.socket):
@@ -154,7 +154,7 @@ class Socket(socket.socket):
 				return True
 			return False
 
-#-------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 def sopt_ipv6only(sock, v6only: bool) -> None:
 	sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1 if v6only else 0)
@@ -238,9 +238,9 @@ def create_connection(hostaddr: tuple[str, int],
 
 def create_serversock(addr: IpAddrType = ('', 0), *,
 		ipv6: bool|None = None, udp: bool = False, reuseaddr: bool|None = None) -> Socket:
-	"""Create socket binded to addr.
+	"""Create socket bound to addr.
 
-	If ipv6 is None the socket will listen on IPv4 and v6 if possible.
+	If ipv6 is None the socket will listen on ipv4 and v6 if possible.
 	On UDP broadcast support is enabled;
 	TCP socket listen on new connections.
 	"""

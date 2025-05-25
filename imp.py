@@ -5,17 +5,18 @@ import importlib as _il
 import logging
 import os.path as _osp
 import sys
+from logging.handlers import RotatingFileHandler
 from types import ModuleType
 from typing import Any, cast
 
 _confpath = cast(str, None)
 _aliases = cast(dict[str, tuple[str, str]], None)
 
-#-------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 def config_log(level: int|str = 'INFO', fmt: str = '', *,
 		force: bool = True, rotfile: str|None = None, addstd: bool = False) -> None:
-	"""Configurate logging format to 'Level(time): [fmt] message'.
+	"""Configure logging format to 'Level(time): [fmt] message'.
 
 	Args:
 	- level: known from logging, can be int or levelname
@@ -29,7 +30,6 @@ def config_log(level: int|str = 'INFO', fmt: str = '', *,
 	level = logging._checkLevel(level)
 	fmt = ' '.join(x for x in ('%(levelname).1s[%(asctime)s]', fmt, '%(message)s') if x)
 	if rotfile:
-		from logging.handlers import RotatingFileHandler
 		h = RotatingFileHandler(rotfile, maxBytes=2**20 if level>10 else 2**21, backupCount=5)
 		if _osp.getsize(h.baseFilename) > 1023:
 			h.doRollover()
@@ -56,7 +56,7 @@ def load_config(name: str) -> Any:
 	with open(_confpath) as f:
 		return _confload(f)[name]
 
-#-------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 class _EnsureSysPath:
 	def __init__(self, path: str):

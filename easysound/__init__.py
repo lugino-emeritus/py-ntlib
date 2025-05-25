@@ -22,7 +22,7 @@ DeviceType = str|None
 
 logger = logging.getLogger(__name__)
 
-#-------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 def _alt_file(filename: str) -> str:
 	if os.path.isfile(filename):
@@ -190,7 +190,7 @@ class FilePlayer:
 			if not self._should_run and isinstance(e, queue.Full):
 				logger.debug('should_run is false with error %r', e)
 				return
-			logger.exception('exception occured in FilePlayer._play')
+			logger.exception('exception occurred in FilePlayer._play')
 			self._file.close()
 		finally:
 			if self._stream.active:
@@ -229,7 +229,7 @@ class FilePlayer:
 			'samplerate': self._file.samplerate, 'blocksize': self._blocksize,
 			'buffersize': _BUFFERSIZE, 'buffer_filled': self._q.qsize()}
 
-#-------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 class InputVolume:
 	def __init__(self, vol_cb: Callable[[float], None], *, device: DeviceType = None,
@@ -303,7 +303,7 @@ class InputVolume:
 			'inputs': self._inputs, 'channels': self._channels,
 			'delay': self._cb_repeat * self._blocksize / self._samplerate}
 
-#-------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 def list_devices() -> dict[str, Any]:
 	"""Show output devices.
