@@ -2,11 +2,11 @@
 __version__ = '0.1.15'
 
 import datetime
-from typing import Any
+from typing import Any, TypeVar
 from . import *
 from . import _norm_filepath, _extend_filepath
 
-CellIdType = str | tuple[int, int]
+CellIdType = TypeVar('CellIdType', str, tuple[int, int])
 
 # -----------------------------------------------------------------------------
 
@@ -18,7 +18,8 @@ def _get_sheet_array(sheet: PyUnoType, start_cell: CellIdType, end_cell: CellIdT
 	return sheet.getCellRangeByName(start_cell + ':' + end_cell) if isinstance(start_cell, str) else \
 		sheet.getCellRangeByPosition(start_cell[1], start_cell[0], end_cell[1], end_cell[0])
 
-def get_data_array(sheet: PyUnoType, start_cell: CellIdType, end_cell: CellIdType) -> tuple[tuple[Any,...],...]:
+def get_data_array(sheet: PyUnoType,
+		start_cell: CellIdType, end_cell: CellIdType) -> tuple[tuple[Any, ...], ...]:
 	return _get_sheet_array(sheet, start_cell, end_cell).DataArray
 
 
@@ -39,9 +40,10 @@ class MiniSheet:
 	def set_formula(self, cell_id: CellIdType, f: str) -> None:
 		_get_sheet_cell(self.sheet, cell_id).Formula = f
 
-	def get_array(self, start_cell: CellIdType, end_cell: CellIdType) -> tuple[tuple[Any,...],...]:
+	def get_array(self, start_cell: CellIdType, end_cell: CellIdType) -> tuple[tuple[Any, ...], ...]:
 		return _get_sheet_array(self.sheet, start_cell, end_cell).DataArray
-	def set_array(self, start_cell: CellIdType, end_cell: CellIdType, data: tuple[tuple[Any,...],...]) -> None:
+	def set_array(self, start_cell: CellIdType, end_cell: CellIdType,
+			data: tuple[tuple[Any, ...], ...]) -> None:
 		_get_sheet_array(self.sheet, start_cell, end_cell).DataArray = data
 
 	def __getitem__(self, idx: CellIdType) -> Any:

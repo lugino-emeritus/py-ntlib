@@ -72,7 +72,6 @@ class Socket(socket.socket):
 	def ensure_timeout(self) -> _EnsureTimeout:
 		return self._ensure_timeout
 
-
 	def tsend(self, data: bytes) -> None:
 		"""Send all data within maxtimeout."""
 		t_max = time.monotonic() + self.maxtimeout

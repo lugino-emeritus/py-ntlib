@@ -29,7 +29,7 @@ _load_config()
 
 # -----------------------------------------------------------------------------
 
-def add_queue(filepath: str, root: tuple[str, ...] =_ROOT) -> None:
+def add_queue(filepath: str, root: tuple[str, ...] = _ROOT) -> None:
 	filepath = filepath.replace('\\', '/')  # to be compatible on linux / windows
 	if '/' not in filepath:
 		filepath = _osp.normpath(_osp.join(_QUEUE_PATH, filepath))

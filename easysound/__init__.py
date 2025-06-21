@@ -44,7 +44,8 @@ def _check_output(device: DeviceType, channels: int|None, samplerate: int) -> Ex
 
 
 class FilePlayer:
-	def __init__(self, filename: str, *, device: DeviceType = None, channels: int|None = None, prepare: bool = True):
+	def __init__(self, filename: str, *,
+			device: DeviceType = None, channels: int|None = None, prepare: bool = True):
 		"""Class to handle audio playback on specific device and channels."""
 		self._file = sf.SoundFile(filename)
 		try:
@@ -57,7 +58,7 @@ class FilePlayer:
 				raise e
 			else:
 				ch = None
-		except:
+		except Exception:
 			self._file.close()
 			raise
 
@@ -148,7 +149,6 @@ class FilePlayer:
 			raise sd.CallbackStop
 		outdata[:] = data
 
-
 	def set_vol_array(self, vol_array: np.ndarray) -> None:
 		"""numpy array from input channels to output channels."""
 		if vol_array.shape != self.channel_shape:
@@ -224,7 +224,7 @@ class FilePlayer:
 
 	def info(self) -> dict[str, Any]:
 		return {'initialized': not self._stream.closed, 'closed': self._file.closed,
-			'is_alive': self._t.is_alive(),  'file': self._file.name,
+			'is_alive': self._t.is_alive(), 'file': self._file.name,
 			'in_channels': self._file.channels, 'out_channels': self._outchannels,
 			'samplerate': self._file.samplerate, 'blocksize': self._blocksize,
 			'buffersize': _BUFFERSIZE, 'buffer_filled': self._q.qsize()}
@@ -249,7 +249,7 @@ class InputVolume:
 		self._vol_scale = self._blocksize / (self._samplerate * delay)
 		if self._vol_scale > 0.5:
 			self._stream.close()
-			raise ValueError(f'delay is too short for given samplerate and blocksize')
+			raise ValueError('delay is too short for given samplerate and blocksize')
 		self._cb_repeat = int(1 / self._vol_scale - 0.5)
 		self._cb_cnt = self._cb_repeat
 
@@ -265,7 +265,7 @@ class InputVolume:
 		if status:
 			logger.error('InputVolume callback status: %s', status)
 			raise sd.CallbackAbort
-		vol = np.average(np.abs(indata[:,self._inputs]))
+		vol = np.average(np.abs(indata[:, self._inputs]))
 		self.vol += (vol - self.vol) * self._vol_scale
 		if self._cb_cnt > 0:
 			self._cb_cnt -= 1
@@ -273,7 +273,7 @@ class InputVolume:
 			self._cb_cnt = self._cb_repeat
 			try:
 				self._vol_cb(self.vol)
-			except:
+			except Exception:
 				logger.exception('vol_cb raised error, stop stream')
 				raise sd.CallbackStop from None
 

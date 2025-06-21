@@ -14,7 +14,7 @@ if len(sys.argv) > 1:
 else:
 	pth = os.path.dirname(os.path.abspath(__file__))
 	try:
-		import ntlib
+		import ntlib  # noqa:F401
 		raise SystemExit('ntlib already accessible')
 	except ImportError:
 		pass

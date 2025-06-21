@@ -106,7 +106,7 @@ class ThreadLoop:
 				while self._should_run and not self._start_flag:
 					if self._target():
 						break
-			except:
+			except Exception:
 				logger.exception('ThreadLoop error calling target')
 			with self._lock:
 				if self._start_flag:
@@ -188,7 +188,7 @@ class QueueWorker:
 					arg = self._q.get(timeout=self.timeout)
 					try:
 						self._target(arg)
-					except:
+					except Exception:
 						logger.exception('QueueWorker error calling target with %s', arg)
 					finally:
 						self._q.task_done()
@@ -245,7 +245,7 @@ class CmpEvent:
 	This data is accessible in the variable result.
 	An optional answer can be sent to the compare thread.
 	"""
-	def __init__(self, cmpfct: Callable[[Any, Any], bool] = lambda x,y: x==y):
+	def __init__(self, cmpfct: Callable[[Any, Any], bool] = lambda x, y: x==y):
 		"""Init method accepts an alternative boolean compare function:
 		cmpfct(init_value, compare_value), equality check (==) by default.
 		"""

@@ -8,7 +8,7 @@ import os
 import sys
 import time
 import uno
-from com.sun.star.beans import PropertyValue  # requires module uno
+from com.sun.star.beans import PropertyValue  # noqa:F401
 from typing import Any, NewType
 from .. import imp as ntimp
 from ..fctthread import start_app
@@ -113,4 +113,3 @@ def get_model_attributes(model) -> dict[Any, list[str]]:
 		else:
 			keys[t] = {x}
 	return {k: sorted(v) for k, v in keys.items()}
-

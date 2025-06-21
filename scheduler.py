@@ -7,8 +7,8 @@ import time
 from collections.abc import Callable, Hashable
 from heapq import heappop, heappush
 from typing import Any, cast
-Self = Any  # TODO: use typing.Self from 2026
 from .fctthread import ThreadLoop
+Self = Any  # TODO: use typing.Self from 2026
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ class RptSched:
 			dt = self._target(key, opt)
 			if dt is not None and dt < 0.0:
 				raise ValueError(f'call returned negative dt: {dt}')
-		except:
+		except Exception:
 			logger.exception('RptSched error calling target with key: %s, opt: %s', key, opt)
 			dt = None
 		with self._lock:
