@@ -7,7 +7,7 @@ import queue
 import subprocess
 import sys
 import threading
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -56,7 +56,8 @@ def start_app(cmd: str|Sequence[str]) -> bool:
 		logger.exception('not possible to start app, cmd: %s', cmd)
 		return False
 
-def start_daemon(target: Callable, args: list|tuple = (), kwargs: dict|None = None) -> threading.Thread:
+def start_daemon(target: Callable, args: Iterable[Any] = (),
+		kwargs: dict[str|Any]|None = None) -> threading.Thread:
 	"""Start and return daemon thread."""
 	t = threading.Thread(target=target, args=args, kwargs=kwargs, daemon=True)
 	t.start()

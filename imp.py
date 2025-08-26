@@ -1,42 +1,66 @@
 """Provide import tools and can set a basic logging format."""
-__version__ = '0.2.15'
+__version__ = '0.3.0'
 
 import importlib as _il
 import logging
-import os.path as _osp
+import os
 import sys
 from logging.handlers import RotatingFileHandler
 from types import ModuleType
 from typing import Any, cast
+
+_osp = os.path
 
 _confpath = cast(str, None)
 _aliases = cast(dict[str, tuple[str, str]], None)
 
 # -----------------------------------------------------------------------------
 
-def config_log(level: int|str = 'INFO', fmt: str = '', *,
-		force: bool = True, rotfile: str|None = None, addstd: bool = False) -> None:
+def _prepare_log_path(filepath: str = '') -> str:
+	"""Create full pathname to a log file, appends the caller name if only a path is given'."""
+	path, filename = _osp.split(filepath)
+	if not filename.strip('.'):
+		path = filepath
+		filename = ''
+	path = _osp.abspath(path)
+	try:
+		os.makedirs(path, exist_ok=True)
+		if not filename:
+			filename = _osp.splitext(_osp.basename(sys.argv[0]))[0] + '.log'
+		return _osp.join(path, filename)
+	except Exception as e:
+		print(f'failed to create log path {filepath}: {e!r}')
+		return ''
+
+def config_log(level: int|str = 'INFO', addfmt: str = '', *, rotpath: str|None = None,
+		rotsize: tuple[int, int]|None = None, addstd: bool = False) -> None:
 	"""Configure logging format to 'Level(time): [fmt] message'.
 
 	Args:
 	- level: known from logging, can be int or levelname
-	- fmt: additional %-formatter
-	- force: set root logger even if it already has a handler
-	- rotfile: rotating log file (1MB, 2MB with DEBUG, 5 backups)
-	- addstd: if rotfile is defined also log to stdout
+	- addfmt: additional %-formatter
+	- rotpath: rotating log file (1MB, 2MB with DEBUG, 5 backups)
+	- rotsize: tuple of (size in kB, number of backups)
+	- addstd: if rotpath is defined also log to stdout
 
-	If more options are needed, use dictConfig or fileConfig from logging.config.
+	If rotpath endswith '/' or '/.' log to 'rotpath/<name_of_start_script>.log'.
 	"""
-	level = logging._checkLevel(level)
-	fmt = ' '.join(x for x in ('%(levelname).1s[%(asctime)s]', fmt, '%(message)s') if x)
-	if rotfile:
-		h = RotatingFileHandler(rotfile, maxBytes=2**20 if level>10 else 2**21, backupCount=5)
+	level = cast(int, logging._checkLevel(level))  # type:ignore
+	fmt = ' '.join(x for x in ('%(levelname).1s[%(asctime)s]', addfmt, '%(message)s') if x)
+	if rotpath:
+		if rotsize:
+			maxsize = rotsize[0] * 2**10
+			backups = rotsize[1]
+		else:
+			maxsize = 2**20 if level > 10 else 2**21
+			backups = 5
+		h = RotatingFileHandler(_prepare_log_path(rotpath), maxBytes=maxsize, backupCount=backups)
 		if _osp.getsize(h.baseFilename) > 1023:
 			h.doRollover()
 		handlers = (h, logging.StreamHandler()) if addstd else (h,)
 	else:
 		handlers = (logging.StreamHandler(),)
-	logging.basicConfig(format=fmt, level=level, force=force, handlers=handlers)
+	logging.basicConfig(format=fmt, level=level, handlers=handlers, force=True)
 
 
 def init_confpath(p: str|None = None, *, force: bool = False) -> None:
@@ -50,7 +74,6 @@ def init_confpath(p: str|None = None, *, force: bool = False) -> None:
 	_confpath = _osp.abspath(p)
 
 def load_config(name: str) -> Any:
-	global _confpath
 	if _confpath is None:
 		init_confpath()
 	with open(_confpath) as f:
@@ -87,6 +110,8 @@ def import_alias(alias: str, modulename: str) -> ModuleType:
 
 def reload(module: ModuleType) -> ModuleType:
 	"""Reload the given module, but not its submodules."""
+	if module.__file__ is None:
+		raise ImportError(f"module '{module.__name__}' has no __file__ path")
 	path, ext = _osp.splitext(module.__file__)
 	if ext != '.py':
 		raise ImportError(f"module '{module.__name__}' is no '.py' file: {module.__file__}")

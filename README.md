@@ -25,7 +25,7 @@ Below is a list with a brief description of the available modules.
 Feel free to modify the source code for your own purposes.
 
 
-## imp
+## `imp`
 
 Provides the following methods:
 
@@ -38,8 +38,11 @@ Provides the following methods:
 
 In order for the following modules to operate correctly copy the `config_sample` folder to `config` and customize it or edit `_confpath.py`.
 
+#### Version Info
+- `v0.3.0` Input params of config_log modified
 
-## fctthread
+
+## `fctthread`
 
 Allows system commands (`shell_cmd`, `start_app`), and provides different classes to work with threads:
 - `ThreadLoop`: execute a method repeatedly
@@ -47,23 +50,23 @@ Allows system commands (`shell_cmd`, `start_app`), and provides different classe
 - `CmpEvent`: receive data from another thread after a successful comparison
 
 
-## scheduler
+## `scheduler`
 
 Module to call methods repeatedly. Also provides a global `RptSched` (`scheduler.glob_sched`) to add e.g. purge jobs.
 
 
-## tsocket
+## `tsocket`
 
 Wrapper over the python socket to use a timeout by default and simplify initialization of udp and ipv6 sockets.
 
 
-## mediactl
+## `mediactl`
 
 Modules to control [vlc](https://www.videolan.org) and [foobar2000](https://www.foobar2000.org) from python.
 The paths to the applications are defined in the config.
 
 
-## easysound
+## `easysound`
 
 Using modules sounddevice and soundfile to playback audio files on a specific output:
 
@@ -98,7 +101,7 @@ invol.close()
 
 When using pulseaudio on linux, the device option should be avoided.
 
-## sofficectl
+## `sofficectl`
 
 Helps connecting python with an open LibreOffice or OpenOffice file using `uno`. Especially useful for calc.
 The config contains the connection parameters.
