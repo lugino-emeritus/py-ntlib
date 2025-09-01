@@ -3,23 +3,12 @@
 Collection of python (3.8+) modules developed for various projects.
 
 To make it available in `sys.path` the cloned folder must have the name ntlib. Then the script `_add_path.py` can be called to add a link of this namespace package to the file mylibs.pth in site-packages or dist-packages.
-Thus, it is possible that the same installation can be used on different systems of a dual-boot computer. Furthermore, this allows the development of libraries without naming issues:
 
-```
-FOLDER STRUCTURE:
-+ path_defined_in_pth_file
-  + ntlib
-    - imp.py
-    - ...
-  + extern
-  	- imp.py
-  	- ...
-```
+Thus, it is possible that the same installation can be used on different systems of a dual-boot computer. Furthermore, this allows the development of libraries without naming issues.
 
-```py
-import ntlib.imp as ntimp
-import extern.imp as extimp
-```
+I have consciously decided not to make these tools available via PyPI: they are only intended as auxiliary modules for some of my projects.
+
+-----
 
 Below is a list with a brief description of the available modules.
 Feel free to modify the source code for your own purposes.
@@ -42,6 +31,17 @@ In order for the following modules to operate correctly copy the `config_sample`
 - `v0.3.0` Input params of config_log modified
 
 
+## `check8`
+
+Run `flake8` with `--config ./config/tox.ini` if available, alternatively with the tox file used in this project.
+
+```sh
+python3 -m ntlib.check8
+```
+
+Personally, I prefer consistent use of tabs. This enables each user to select their preferred indentation size. Thus, the `tox.ini` here allows tabls.
+
+
 ## `fctthread`
 
 Allows system commands (`shell_cmd`, `start_app`), and provides different classes to work with threads:
@@ -58,12 +58,6 @@ Module to call methods repeatedly. Also provides a global `RptSched` (`scheduler
 ## `tsocket`
 
 Wrapper over the python socket to use a timeout by default and simplify initialization of udp and ipv6 sockets.
-
-
-## `mediactl`
-
-Modules to control [vlc](https://www.videolan.org) and [foobar2000](https://www.foobar2000.org) from python.
-The paths to the applications are defined in the config.
 
 
 ## `easysound`
@@ -100,6 +94,13 @@ invol.close()
 ```
 
 When using pulseaudio on linux, the device option should be avoided.
+
+
+## `mediactl`
+
+Modules to control [vlc](https://www.videolan.org) and [foobar2000](https://www.foobar2000.org) from python.
+The paths to the applications are defined in the config.
+
 
 ## `sofficectl`
 
