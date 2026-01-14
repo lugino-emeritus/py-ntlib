@@ -1,10 +1,9 @@
 """LibreOffice calc modification tool."""
-__version__ = '0.1.15'
+__version__ = '0.1.16'
 
 import datetime
 from typing import Any, TypeVar
 from . import *
-from . import _norm_filepath, _extend_filepath
 
 CellIdType = TypeVar('CellIdType', str, tuple[int, int])
 
@@ -65,10 +64,10 @@ def export_pdf(model: PyUnoType, *, refresh: bool = False, path: str|None = None
 		else:
 			raise ValueError('pdf export not possible, no file name found')
 	else:
-		path = _extend_filepath(path)
+		path = extend_filepath(path)
 	args = (PropertyValue('FilterName', 0, 'calc_pdf_Export', 0),)
 	model.storeToURL(path, args)
-	return _norm_filepath(path)
+	return norm_filepath(path)
 
 # -----------------------------------------------------------------------------
 

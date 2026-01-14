@@ -18,7 +18,7 @@ _BUFFERSIZE = 16
 _BUFFERFILL = 4
 assert _BUFFERFILL <= _BUFFERSIZE
 
-DeviceType = str|None
+DeviceType = int|str|None
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +71,7 @@ class FilePlayer:
 		self._timeout = 0.1 + self._blocksize / self._file.samplerate
 
 		self._init_stream(device, ch)
-		self._device = self._stream.device
+		self._device: DeviceType = self._stream.device
 		self._outchannels = self._stream.channels
 		self._vol_array = np.eye(self._file.channels, self._outchannels, dtype=_DTYPE)
 
@@ -136,6 +136,7 @@ class FilePlayer:
 			logger.error('FilePlayer callback status: %s', status)
 			raise sd.CallbackAbort
 		if not self._should_run:
+			logger.info('callback stop')
 			outdata[:] = 0
 			raise sd.CallbackStop
 		try:
@@ -178,11 +179,11 @@ class FilePlayer:
 				data = self._read_sound_data()
 				if data is None:
 					self._q.put(0, timeout=self._timeout)
-					logging.debug('end of soundfile')
+					logger.debug('end of soundfile')
 					break
 				self._q.put(data, timeout=self._timeout)
 			else:
-				logging.info('should_run set to false')
+				logger.info('should_run set to false')
 			self._q.put(None, timeout=self._timeout)
 			self._stopped.wait(_BUFFERSIZE * self._timeout)
 			self._should_run = False
@@ -194,7 +195,7 @@ class FilePlayer:
 			self._file.close()
 		finally:
 			if self._stream.active:
-				logger.warning('stream still active, but reached end')
+				logger.debug('stream still active, but end reached')
 			self._stream.close()
 
 	def play(self) -> bool:
@@ -221,6 +222,10 @@ class FilePlayer:
 
 	def is_alive(self) -> bool:
 		return self._t.is_alive()
+
+	@property
+	def should_run(self) -> bool:
+		return self._should_run
 
 	def info(self) -> dict[str, Any]:
 		return {'initialized': not self._stream.closed, 'closed': self._file.closed,

@@ -1,10 +1,11 @@
 """Provide import tools and can set a basic logging format."""
-__version__ = '0.3.0'
+__version__ = '0.3.1'
 
-import importlib as _il
+import importlib
 import logging
 import os
 import sys
+from importlib.util import module_from_spec
 from logging.handlers import RotatingFileHandler
 from types import ModuleType
 from typing import Any, cast
@@ -96,7 +97,7 @@ def import_path(modulename: str, path: str = '.') -> ModuleType:
 	if not _osp.isdir(path):
 		raise ImportError(f'no directory: {path}')
 	with _EnsureSysPath(_osp.abspath(path)):
-		return _il.import_module(modulename)
+		return importlib.import_module(modulename)
 
 def import_alias(alias: str, modulename: str) -> ModuleType:
 	"""Import module from an alias path defined in the config.json file."""
@@ -108,8 +109,12 @@ def import_alias(alias: str, modulename: str) -> ModuleType:
 		modulename = '.'.join((tail, modulename))
 	return import_path(modulename, path)
 
+
 def reload(module: ModuleType) -> ModuleType:
-	"""Reload the given module, but not its submodules."""
+	"""Reload the given module.
+
+	Use it with care.
+	"""
 	if module.__file__ is None:
 		raise ImportError(f"module '{module.__name__}' has no __file__ path")
 	path, ext = _osp.splitext(module.__file__)
@@ -123,4 +128,16 @@ def reload(module: ModuleType) -> ModuleType:
 		if names.pop() != tail:
 			raise ImportError(f"module '{module.__name__}' not match source: {module.__file__}")
 	with _EnsureSysPath(path):
-		return _il.reload(module)
+		return importlib.reload(module)
+
+def import_copy(module: ModuleType) -> ModuleType:
+	"""Import fresh copy of a module.
+
+	Use it with care.
+	"""
+	spec = module.__spec__
+	if not spec or not spec.loader:
+		raise ImportError()
+	m = module_from_spec(spec)
+	spec.loader.exec_module(m)
+	return m

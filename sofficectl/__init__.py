@@ -2,7 +2,7 @@
 
 Base module to connect to a soffice model.
 """
-__version__ = '0.2.4'
+__version__ = '0.2.5'
 
 import os
 import sys
@@ -38,12 +38,14 @@ def _init_ctx() -> PyUnoType:
 			raise err from None
 	return ctx.ServiceManager.createInstanceWithContext('com.sun.star.frame.Desktop', ctx)
 
-def _norm_filepath(path: str) -> str:
+def norm_filepath(path: str) -> str:
+	"""Convert soffice location to os path."""
 	if path.startswith('file:///'):
 		path = path[(8 if sys.platform.startswith('win') else 7):]
 	return os.path.normpath(path)
 
-def _extend_filepath(path: str) -> str:
+def extend_filepath(path: str) -> str:
+	"""Extend filepath to soffice location path."""
 	if not path.startswith('file:///'):
 		pre = 'file:///' if sys.platform.startswith('win') else 'file://'
 		return pre + os.path.abspath(path)
@@ -55,7 +57,7 @@ def _find_doc(ctx: PyUnoType, title: str, path: str|None, query: str|None) -> Py
 	query_set = set()
 	for m in ctx.Components:
 		if m_path := getattr(m, 'Location', None):
-			m_path = _norm_filepath(m_path)
+			m_path = norm_filepath(m_path)
 			if path == m_path:
 				return m
 			elif query is not None and query in m_path.lower():
@@ -95,7 +97,7 @@ def connect(query: str = '') -> PyUnoType:
 		model = ctx.getCurrentComponent()
 		# use getattr since the model may not be initialized
 		if m_path := getattr(model, 'Location', None):
-			if path == _norm_filepath(m_path):
+			if path == norm_filepath(m_path):
 				return model
 	raise ConnectionError('not possible to connect to existing file')
 
