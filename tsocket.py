@@ -1,5 +1,5 @@
 """Socket wrapper with simplified IPv6 and timeout support."""
-__version__ = '0.2.23'
+__version__ = '0.2.24'
 
 import select
 import socket
@@ -229,11 +229,18 @@ def broadcast_addrs(port: int, ipv6: bool = False) -> tuple[IpAddrType, ...]:
 		if ipv6 else (('255.255.255.255', port), ('127.0.0.1', port))
 
 
-def create_connection(hostaddr: tuple[str, int],
-		timeout: float = _TIMEOUT_MAX, bindaddr: IpAddrType|None = None) -> Socket:
-	"""Connect to a TCP address and return the socket."""
-	sock = socket.create_connection(hostaddr, timeout, bindaddr)
-	return Socket(sock, timeout=_TIMEOUT_TCP)
+def create_connection(hostaddr: tuple[str, int], *,
+		bindaddr: IpAddrType|None = None, udp: bool = False, timeout: float = _TIMEOUT_MAX) -> Socket:
+	"""Connect to a TCP or UDP socket."""
+	if udp:
+		sock = Socket(udp=udp, timeout=timeout)
+		if bindaddr:
+			sock.bind(bindaddr)
+		sock.connect(hostaddr)
+		return sock
+	else:
+		sock = socket.create_connection(hostaddr, timeout, bindaddr)
+		return Socket(sock, timeout=_TIMEOUT_TCP)
 
 def create_serversock(addr: IpAddrType = ('', 0), *,
 		ipv6: bool|None = None, udp: bool = False, reuseaddr: bool|None = None) -> Socket:

@@ -1,5 +1,5 @@
 """Control methods in separate threads."""
-__version__ = '0.2.24'
+__version__ = '0.2.25'
 
 import logging
 import os
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 _ENCODING = 'utf-8'
 
-def _popen_ext(cmd: str|Sequence[str], shell: bool = False):
+def _popen_ext(cmd: str|Sequence[str], shell: bool = False) -> None:
 	subprocess.Popen(cmd, shell=shell, start_new_session=True,
 		stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
@@ -57,7 +57,7 @@ def start_app(cmd: str|Sequence[str]) -> bool:
 		return False
 
 def start_daemon(target: Callable, args: Iterable[Any] = (),
-		kwargs: dict[str|Any]|None = None) -> threading.Thread:
+		kwargs: dict[str, Any]|None = None) -> threading.Thread:
 	"""Start and return daemon thread."""
 	t = threading.Thread(target=target, args=args, kwargs=kwargs, daemon=True)
 	t.start()
